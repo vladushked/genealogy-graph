@@ -55,6 +55,8 @@ export class ProfileModal extends Modal {
   constructor(app: App, private readonly host: ProfileHost, private id: string, private readonly lang: Lang) {
     super(app);
     this.words = PROFILE_TEXT[lang];
+    // Obsidian dims a modal's background to an inline opacity of 0.85; the profile's blurred backdrop is fully opaque.
+    (this as unknown as { setBackgroundOpacity?(opacity: string): void }).setBackgroundOpacity?.('1');
   }
 
   onOpen() {
@@ -167,7 +169,7 @@ export class ProfileModal extends Modal {
       [words.children, relatives.children], [words.siblings, relatives.siblings], [words.godparents, godparents]] as Array<[string, string[]]>) {
       if (!list.length) continue;
       any = true;
-      const row = family.createDiv({ cls: 'genealogy-profile-row' });
+      const row = family.createDiv({ cls: 'genealogy-profile-row has-chips' });
       row.createDiv({ cls: 'genealogy-profile-label', text: label });
       const chips = row.createDiv({ cls: 'genealogy-profile-chips' });
       for (const other of this.sorted(list)) this.chip(chips, other);

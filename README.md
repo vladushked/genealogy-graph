@@ -199,7 +199,11 @@ The preview is the sheet itself: paper, margins, bleed, crop marks and the part 
 
 In Obsidian open **Settings → Community plugins → Browse**, find **Genealogy Graph**, install and enable it. To install by hand, copy `main.js`, `manifest.json` and `styles.css` from a [release](https://github.com/vladushked/genealogy-graph/releases) to `.obsidian/plugins/genealogy-graph/` and enable the plugin.
 
-The plugin works offline: it makes no network requests and collects nothing. It reads person notes and writes them only as described above.
+The plugin works offline: it makes no network requests and collects nothing.
+
+- **Vault access.** To find person notes it reads the properties of every Markdown file in the vault (Obsidian's metadata cache) and ignores notes without `type: person`. It writes notes only as described above.
+- **Files outside the vault.** Only during an import: the plugin reads the GEDCOM or «Древо Жизни» file you pick, and the photos and documents it refers to on your disk (through Node's `fs`, desktop only), and copies them into the vault (**Папка файлов**). Nothing outside the vault is ever written.
+- **Export** saves a file where you choose.
 
 ## Build
 

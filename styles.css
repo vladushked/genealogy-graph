@@ -11,8 +11,9 @@
   --genealogy-halo: var(--background-primary);
   display: flex; flex-direction: column; height: 100%; min-height: 0;
   /* Edge to edge, like Obsidian's graph view: the panel floats over the graph instead of a toolbar above it. */
-  padding: 0 !important; overflow: hidden;
+  overflow: hidden;
 }
+.workspace-leaf-content[data-type='genealogy-graph-view'] .view-content.genealogy-view { padding: 0; }
 .theme-light .genealogy-view {
   --genealogy-edge: #7a8699;
   --genealogy-spouse: #ec8f8f;
@@ -253,7 +254,7 @@
 .genealogy-mode-icon svg { width: 14px; height: 14px; }
 
 /* The profile window: nearly full screen over the blurred, frozen graph; portrait left, facts right, the note below. */
-.genealogy-profile-container .modal-bg { opacity: 1 !important; background: color-mix(in srgb, var(--background-primary) 35%, transparent);
+.genealogy-profile-container .modal-bg { background: color-mix(in srgb, var(--background-primary) 35%, transparent);
   backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2); }
 .modal.genealogy-profile { position: relative; width: min(1120px, 94vw); max-width: none; height: min(92vh, 1000px); max-height: none; padding: 0; border-radius: 20px; }
 .modal.genealogy-profile > .modal-close-button, .modal.genealogy-profile > .modal-header-button, .modal.genealogy-profile > .modal-header { display: none; } /* Its own buttons are in the bar. */
@@ -278,7 +279,7 @@
 .genealogy-profile-row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; padding: 8px 0; }
 /* Groups of relatives are told apart by a line between them. */
 .genealogy-profile-row + .genealogy-profile-row { border-top: 1px solid var(--background-modifier-border); }
-.genealogy-profile-row:has(.genealogy-profile-chips) .genealogy-profile-label { padding-top: 7px; } /* Level with the first chip. */
+.genealogy-profile-row.has-chips .genealogy-profile-label { padding-top: 7px; } /* Level with the first chip. */
 .genealogy-profile-label { color: var(--text-muted); }
 .genealogy-profile-value { min-width: 0; overflow-wrap: anywhere; }
 .genealogy-profile-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }

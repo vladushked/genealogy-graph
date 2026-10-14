@@ -7,6 +7,9 @@ on:
 
 permissions:
   contents: write
+  # Artifact attestations: anyone can check that the release files were built here from this commit.
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -25,6 +28,12 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
       - name: Publish release
         run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes main.js manifest.json styles.css
         env:

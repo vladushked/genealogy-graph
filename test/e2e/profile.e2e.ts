@@ -10,6 +10,7 @@ describe('[PROFILE] the person profile', () => {
     await clickNode(want.self, { double: true });
     const profile = browser.$('.modal.genealogy-profile');
     await expect(profile).toBeDisplayed();
+    await browser.waitUntil(async () => await browser.execute(() => getComputedStyle(document.querySelector('.genealogy-profile-container .modal-bg')!).opacity) === '1', { timeoutMsg: 'the profile backdrop is not opaque' });
     await expect(profile.$('.genealogy-profile-name')).toHaveText('Озеров Денис Сергеевич');
     await expect(profile).toHaveText(expect.stringContaining('ЖИЗНЬ'));
     await expect(profile).toHaveText(expect.stringContaining('14 марта 1990'));
