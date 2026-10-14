@@ -1,0 +1,307 @@
+.genealogy-view {
+  --genealogy-bg: var(--background-primary);
+  --genealogy-edge: #8091a8;
+  --genealogy-spouse: #f5a1a1;
+  --genealogy-route: #ffdc69;
+  --genealogy-ring: #e8edf5;
+  --genealogy-selected: var(--text-normal);
+  --genealogy-hypothesis: #f2bd5a;
+  --genealogy-text: var(--text-normal);
+  --genealogy-years: var(--text-muted);
+  --genealogy-halo: var(--background-primary);
+  display: flex; flex-direction: column; height: 100%; min-height: 0;
+  /* Edge to edge, like Obsidian's graph view: the panel floats over the graph instead of a toolbar above it. */
+  padding: 0 !important; overflow: hidden;
+}
+.theme-light .genealogy-view {
+  --genealogy-edge: #7a8699;
+  --genealogy-spouse: #ec8f8f;
+  --genealogy-route: #d08a00;
+  --genealogy-ring: #ffffff;
+  --genealogy-hypothesis: #c98a1e;
+}
+.genealogy-panel { position: relative; flex: 1; min-height: 200px; background: var(--genealogy-bg); overflow: hidden; touch-action: none; cursor: grab; outline: none; }
+.genealogy-panel:active { cursor: grabbing; }
+/* The live graph is drawn on this canvas (src/canvas.ts); colors come from the variables of .genealogy-view. */
+.genealogy-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.genealogy-zoom { position: absolute; z-index: 2; right: 10px; bottom: 28px; display: flex; flex-direction: column; gap: 4px; }
+.genealogy-zoom button { width: 28px; height: 28px; padding: 0; font-size: 15px; line-height: 1; }
+/* Export: settings on the left, the sheet (and the whole graph for «Область» and «Склейка») on the right. */
+.modal.genealogy-export-dialog { width: min(1100px, 94vw); max-width: none; }
+.genealogy-export { display: grid; grid-template-columns: minmax(280px, 340px) 1fr; gap: 16px; min-height: min(70vh, 640px); }
+@media (max-width: 760px) { .genealogy-export { grid-template-columns: 1fr; } }
+.genealogy-export-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.genealogy-export-controls { display: flex; flex-direction: column; gap: 8px; }
+.genealogy-export-row { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 8px; font-size: var(--font-ui-small); }
+.genealogy-export-label { color: var(--text-muted); }
+.genealogy-export-field { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.genealogy-export-field select { max-width: 100%; min-width: 0; flex: 1; }
+.genealogy-export-number { width: 64px; }
+.genealogy-export-suffix { color: var(--text-muted); }
+.genealogy-export-check { display: flex; align-items: center; gap: 5px; }
+.genealogy-export-segments { display: inline-flex; flex-wrap: wrap; }
+.genealogy-export-dialog .genealogy-mode-button { height: auto; padding: 3px 10px; border-radius: 12px; box-shadow: none; background: transparent; font-size: var(--font-ui-small); color: var(--text-muted); }
+.genealogy-export-dialog .genealogy-mode-button:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+.genealogy-export-dialog .genealogy-mode-button.is-active { color: var(--text-on-accent); background: var(--interactive-accent); }
+.genealogy-export-segments .genealogy-mode-button:disabled { opacity: 0.4; cursor: not-allowed; }
+.genealogy-export-status { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px; background: var(--background-secondary); font-size: var(--font-ui-small); color: var(--text-muted); }
+.genealogy-export-reading { font-size: var(--font-ui-medium); color: var(--text-normal); }
+.genealogy-export-reading-pt { font-weight: var(--font-semibold); }
+.genealogy-export-reading.is-ok .genealogy-export-reading-pt { color: var(--color-green); }
+.genealogy-export-reading.is-near .genealogy-export-reading-pt { color: var(--color-orange); }
+.genealogy-export-reading.is-small .genealogy-export-reading-pt { color: var(--text-error); }
+.genealogy-export-note.is-warning { color: var(--color-orange); }
+.genealogy-export-note.is-error { color: var(--text-error); }
+.genealogy-view .genealogy-export-inline, .genealogy-export-inline { height: auto; padding: 1px 8px; font-size: var(--font-ui-smaller); }
+.genealogy-export-previews { display: flex; flex-direction: column; gap: 12px; min-width: 0; height: min(72vh, 680px); }
+.genealogy-export-overview { flex: 1 1 0; min-height: 0; display: grid; place-items: center; background: var(--background-secondary); border-radius: 10px; overflow: hidden; }
+.genealogy-export-overview.is-draggable { cursor: move; touch-action: none; }
+.genealogy-export-overview > svg, .genealogy-preview > svg { display: block; width: 100%; height: 100%; }
+.genealogy-overview-frame { fill: color-mix(in srgb, var(--interactive-accent) 12%, transparent); stroke: var(--interactive-accent); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.genealogy-overview-tile { fill: none; stroke: var(--interactive-accent); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+.genealogy-overview-number { fill: var(--interactive-accent); opacity: 0.35; text-anchor: middle; dominant-baseline: central; font-weight: 700; }
+.genealogy-preview { flex: 1 1 0; min-height: 0; display: grid; place-items: center; padding: 12px; background: var(--background-secondary); border-radius: 10px; overflow: hidden; }
+.genealogy-sheet { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25)); }
+.genealogy-sheet-paper { fill: #fff; }
+.genealogy-sheet-bleed { fill: #f6d4d4; }
+.genealogy-sheet-margin { fill: none; stroke: #9aa5b5; stroke-width: 0.4; stroke-dasharray: 2 2; }
+.genealogy-sheet-mark { stroke: #000; stroke-width: 0.25; }
+.genealogy-import-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
+.genealogy-import-row input[type=search] { min-width: 320px; }
+/* Floating control panel (top right): Obsidian's own graph-controls markup and styles, a few additions below. */
+.genealogy-controls { z-index: 3; cursor: default; }
+/* Leaves the zoom buttons below the panel free. */
+.genealogy-controls:not(.is-close) { max-height: calc(100% - 150px); }
+.genealogy-controls .genealogy-controls-body { display: flex; flex-direction: column; gap: 6px; }
+.genealogy-controls .setting-item-description { font-size: var(--font-ui-smaller); padding-top: 2px; }
+/* The built-in graph's settings have no descriptions and lay the name out in a row; ours stack the description under it. */
+.genealogy-controls .setting-item .setting-item-info { display: block; }
+.genealogy-controls .search-input-container input { width: 100%; }
+.genealogy-controls-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.genealogy-controls-actions:empty { display: none; }
+.genealogy-controls-actions button { font-size: var(--font-ui-small); }
+/* Generations to highlight: a column on the left edge, oldest at the top. */
+.genealogy-left { position: absolute; z-index: 2; left: var(--size-4-3); top: 50%; transform: translateY(-50%); max-height: calc(100% - 120px);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.genealogy-generation-rail { min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.genealogy-generation-rail:empty { display: none; }
+.genealogy-generation-rail button { height: auto; gap: 5px; padding: 2px 8px 2px 6px; border-radius: 12px; font-size: var(--font-ui-smaller); font-variant-numeric: tabular-nums;
+  background: var(--background-primary); color: var(--text-muted); box-shadow: none; border: 1px solid var(--background-modifier-border);
+  transition: background-color 0.2s ease-out, color 0.2s ease-out; }
+.genealogy-generation-rail button:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+.genealogy-generation-chip::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--genealogy-chip); flex: none; }
+.genealogy-generation-chip.is-active::before { background: #111; opacity: 0.35; }
+.genealogy-me-badge { margin-left: 1px; padding: 0 5px; border-radius: 8px; font-size: 10px; font-weight: var(--font-semibold); line-height: 15px;
+  background: var(--interactive-accent); color: var(--text-on-accent); }
+.genealogy-generation-chip.is-active, .genealogy-generation-chip.is-active:hover { background: var(--genealogy-chip); color: #111; }
+.genealogy-generation-reset { margin-top: 4px; }
+/* Problems: a button in the top left corner, their list under it. */
+.genealogy-corner { position: absolute; z-index: 3; top: var(--size-4-3); left: var(--size-4-3); display: flex; gap: 6px; }
+.genealogy-problems-button, .genealogy-clarify-button { gap: 4px; padding: var(--size-2-3);
+  background: var(--background-primary); font-size: var(--font-ui-small); color: var(--text-muted); }
+.genealogy-problems-button.is-active, .genealogy-problems-button:hover { color: var(--text-error); }
+.genealogy-clarify-button { background: var(--background-primary); font-size: var(--font-ui-small); color: var(--text-muted); }
+.genealogy-clarify-button.is-active, .genealogy-clarify-button:hover { color: var(--genealogy-hypothesis); }
+.genealogy-clarify .genealogy-problems-title { color: var(--genealogy-hypothesis); }
+.genealogy-problems-icon { display: flex; }
+.genealogy-problems { position: absolute; z-index: 3; top: calc(var(--size-4-3) + 34px); left: var(--size-4-3); width: 300px; max-height: calc(100% - 100px); overflow-y: auto;
+  padding: var(--size-2-3) var(--size-4-3); cursor: default; font-size: var(--font-ui-smaller);
+  background: var(--menu-background, var(--background-secondary)); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); box-shadow: var(--shadow-s); }
+.genealogy-problems-title { font-weight: var(--font-medium); font-size: var(--font-ui-small); padding: 4px 0 6px; }
+.genealogy-problems-group { padding: 4px 0; border-top: 1px solid var(--background-modifier-border); }
+.genealogy-problems-person { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.genealogy-problems-person a { font-weight: var(--font-semibold); }
+.genealogy-problems-issue { padding-left: 10px; color: var(--text-muted); }
+.genealogy-suggest-years { font-size: var(--font-ui-smaller); color: var(--text-muted); }
+/* The status line sits on the very bottom of the graph and fades into it. */
+.genealogy-status { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 18px 12px 5px; pointer-events: none;
+  font-size: var(--font-ui-smaller); color: var(--text-muted); background: linear-gradient(to top, var(--genealogy-bg) 35%, transparent); }
+/* The bottom dock, a search widget as on a phone: a frosted pill between the route button and «+». */
+.genealogy-dock { position: absolute; z-index: 2; left: 50%; bottom: 28px; transform: translateX(-50%); width: min(440px, calc(100% - 220px)); min-width: 220px;
+  display: flex; align-items: center; gap: 8px; }
+.genealogy-dock-search, .genealogy-view .genealogy-dock-button { height: 40px; border-radius: 20px; border: 1px solid var(--background-modifier-border);
+  background: color-mix(in srgb, var(--background-primary) 72%, transparent); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22); }
+.genealogy-dock-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0 14px; color: var(--text-muted); transition: border-color 120ms ease, box-shadow 120ms ease; }
+.genealogy-dock-search:focus-within { border-color: var(--interactive-accent); box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22), 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 35%, transparent); }
+.genealogy-dock-search-icon { display: flex; flex-shrink: 0; }
+.genealogy-dock-search-icon svg { width: 16px; height: 16px; }
+.genealogy-view .genealogy-dock-search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: none; border-radius: 0; background: transparent; box-shadow: none;
+  font-size: var(--font-ui-medium); color: var(--text-normal); }
+.genealogy-view .genealogy-dock-search input:focus { box-shadow: none; }
+.genealogy-view .genealogy-dock-button { flex-shrink: 0; width: 40px; padding: 0; color: var(--text-muted); }
+.genealogy-view .genealogy-dock-button:hover { color: var(--text-normal); background: color-mix(in srgb, var(--background-modifier-hover) 60%, var(--background-primary)); }
+.genealogy-view .genealogy-dock-button.is-active { color: var(--text-on-accent); background: var(--interactive-accent); border-color: var(--interactive-accent); }
+.genealogy-dock-button svg { width: 18px; height: 18px; }
+.genealogy-view .genealogy-me-button { font-size: var(--font-ui-medium); font-weight: var(--font-semibold); }
+.genealogy-view .genealogy-me-button.is-unset { color: var(--text-faint); border-style: dashed; }
+/* Path mode: the route card above the dock, in the same frosted style. */
+.genealogy-route-card { position: absolute; left: 0; right: 0; bottom: calc(100% + 10px); padding: 10px 12px 8px; border-radius: 16px;
+  border: 1px solid var(--background-modifier-border); background: color-mix(in srgb, var(--background-primary) 80%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+  font-size: var(--font-ui-small); }
+.genealogy-route-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.genealogy-route-title { font-weight: var(--font-semibold); color: var(--text-normal); }
+.genealogy-route-status { flex: 1; text-align: right; color: var(--text-muted); }
+.genealogy-route-status.is-found { color: var(--interactive-accent); }
+.genealogy-route-status.is-missing { color: var(--text-error); }
+.genealogy-view .genealogy-route-close, .genealogy-view .genealogy-route-remove { flex-shrink: 0; margin-left: auto; width: 22px; height: 22px; padding: 2px; }
+.genealogy-route-fields { display: flex; align-items: center; gap: 8px; }
+/* The rings of the two ends and the dotted line between them. */
+.genealogy-route-rail { flex-shrink: 0; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 13px 0; }
+.genealogy-route-dot { flex-shrink: 0; width: 12px; height: 12px; border-radius: 50%; border: 3px solid var(--text-normal); }
+.genealogy-route-dot.is-from { border-color: var(--interactive-accent); }
+.genealogy-route-line { flex: 1; min-height: 8px; margin: 3px 0; border-left: 2px dotted var(--text-faint); }
+.genealogy-route-slots { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+/* A chosen person sits in a box drawn like Obsidian's own fields; an empty end is Obsidian's input as it is. */
+.genealogy-route-slot { display: flex; align-items: center; gap: 8px; height: var(--input-height); padding: 0 4px 0 var(--size-4-2); border-radius: var(--input-radius);
+  border: var(--input-border-width) solid var(--background-modifier-border); background: var(--background-modifier-form-field); }
+.genealogy-route-slot.is-empty { padding: 0; border: none; background: none; }
+.genealogy-view .genealogy-route-input { flex: 1; min-width: 0; width: 100%; height: 100%; }
+.genealogy-route-slot.is-next .genealogy-route-input { border-color: var(--interactive-accent); }
+.genealogy-view .genealogy-route-name { flex: 0 1 auto; min-width: 0; height: auto; padding: 0; border: none; background: none; box-shadow: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--font-ui-small); color: var(--text-normal); cursor: pointer; }
+.genealogy-view .genealogy-route-name:hover { color: var(--interactive-accent); background: none; }
+.genealogy-route-years { flex: 1; min-width: 0; white-space: nowrap; color: var(--text-faint); font-size: var(--font-ui-smaller); }
+.genealogy-view .genealogy-route-swap { flex-shrink: 0; width: 28px; height: 28px; padding: 4px; }
+.genealogy-view .genealogy-route-swap:disabled { opacity: 0.4; cursor: default; }
+/* «Корни»: the threshold of kin around the ancestry, and the oldest ancestors. */
+.genealogy-roots-depth { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--background-modifier-border); }
+.genealogy-roots-depth-label { color: var(--text-muted); }
+.genealogy-roots-depth .genealogy-mode-button { justify-content: center; min-width: 30px; font-variant-numeric: tabular-nums; }
+.genealogy-roots-oldest { margin-top: 6px; color: var(--text-faint); font-size: var(--font-ui-smaller); }
+/* Kinship of the route ends: the term under the people, the chain of roles between them. */
+.genealogy-kin { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--background-modifier-border); }
+.genealogy-kin-word { font-size: var(--font-ui-medium); font-weight: var(--font-semibold); color: var(--text-normal); }
+.genealogy-kin-none { color: var(--text-muted); }
+.genealogy-kin-saying { font-style: italic; } /* An easter egg in place of a term: a saying, not a fact. */
+.genealogy-kin-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; padding: 0 var(--size-4-2); font-size: var(--font-ui-smaller); color: var(--text-faint); }
+.genealogy-view .genealogy-kin-step { height: auto; padding: 0 2px; border: none; background: none; box-shadow: none; font-size: var(--font-ui-smaller); color: var(--text-muted); cursor: pointer; }
+.genealogy-view .genealogy-kin-step:hover { color: var(--interactive-accent); background: none; }
+/* «Поколение за поколением»: titles at the top, each generation fading in over the one before. */
+.genealogy-credits { position: absolute; z-index: 2; top: calc(var(--size-4-3) + 44px); left: 50%; transform: translateX(-50%); width: min(90%, 520px);
+  display: grid; pointer-events: none; text-align: center; }
+.genealogy-credits-card { grid-area: 1 / 1; animation: genealogy-credits-in 0.7s ease-out both; text-shadow: 0 0 12px var(--background-primary), 0 0 4px var(--background-primary); }
+.genealogy-credits-card.is-leaving { animation: genealogy-credits-out 0.6s ease-in both; }
+.genealogy-credits-title { font-size: 1.7em; font-weight: var(--font-bold); letter-spacing: 0.04em; color: var(--text-normal); }
+.genealogy-credits-years { margin-top: 2px; font-size: var(--font-ui-medium); letter-spacing: 0.08em; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.genealogy-credits-caption { margin-top: 4px; font-size: var(--font-ui-small); font-style: italic; color: var(--text-accent); }
+@keyframes genealogy-credits-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes genealogy-credits-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-10px); } }
+@media (prefers-reduced-motion: reduce) { .genealogy-credits-card, .genealogy-credits-card.is-leaving { animation-duration: 0.01s; } }
+/* «Поколение за поколением» while it runs. */
+.genealogy-controls .mod-animate.is-active, .genealogy-controls .extra-setting-button.is-active { color: var(--interactive-accent); }
+
+/* Adding people: «+» beside the selected person, right of the search, and in the middle of an empty vault. */
+.genealogy-view .genealogy-node-plus { position: absolute; z-index: 2; left: 0; top: 0; width: 24px; height: 24px; padding: 0; border-radius: 50%;
+  background: var(--interactive-accent); color: var(--text-on-accent); box-shadow: var(--shadow-s); }
+.genealogy-view .genealogy-node-plus:hover { background: var(--interactive-accent-hover); }
+.genealogy-node-plus svg, .genealogy-add-button svg { width: 16px; height: 16px; }
+.genealogy-view .genealogy-add-button { flex-shrink: 0; width: 40px; height: 40px; padding: 0; border-radius: 50%;
+  background: var(--interactive-accent); color: var(--text-on-accent); box-shadow: var(--shadow-s); }
+.genealogy-view .genealogy-add-button:hover { background: var(--interactive-accent-hover); }
+.genealogy-empty { position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; pointer-events: none; }
+.genealogy-view .genealogy-empty-add { pointer-events: auto; width: 72px; height: 72px; padding: 0; border-radius: 50%; background: var(--interactive-accent); color: var(--text-on-accent); box-shadow: var(--shadow-s); }
+.genealogy-view .genealogy-empty-add:hover { background: var(--interactive-accent-hover); }
+.genealogy-empty-add svg { width: 32px; height: 32px; }
+.genealogy-empty-text { color: var(--text-muted); font-size: var(--font-ui-small); }
+/* Picking a relative for the editor. */
+.genealogy-panel.is-picking, .genealogy-panel.is-picking:active { cursor: crosshair; }
+.genealogy-pick-hint { position: absolute; z-index: 3; top: calc(var(--size-4-3) + 40px); left: 50%; transform: translateX(-50%); padding: 4px 12px; border-radius: 12px;
+  background: var(--interactive-accent); color: var(--text-on-accent); font-size: var(--font-ui-small); pointer-events: none; white-space: nowrap; }
+
+/* Person form in the sidebar. */
+.genealogy-editor { padding: var(--size-4-3) var(--size-4-4); }
+.genealogy-editor-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-bottom: var(--size-4-2); }
+.genealogy-editor-tools { display: flex; gap: 2px; flex-shrink: 0; }
+.genealogy-editor-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.genealogy-editor-details { margin-top: var(--size-4-1); }
+.genealogy-editor-details > summary { cursor: pointer; font-size: var(--font-ui-small); color: var(--text-muted); padding: 2px 0; }
+.genealogy-editor-details[open] { display: flex; flex-direction: column; gap: 6px; }
+.genealogy-editor-title { font-weight: var(--font-semibold); font-size: var(--font-ui-medium); }
+.genealogy-editor-form { display: flex; flex-direction: column; gap: 6px; }
+.genealogy-editor-row, .genealogy-editor-relation { display: flex; flex-direction: column; gap: 2px; }
+.genealogy-editor-row label, .genealogy-editor-relation > label { font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.genealogy-editor-row input, .genealogy-editor-row select { width: 100%; }
+.genealogy-editor-section { margin-top: var(--size-4-2); font-size: var(--font-ui-small); font-weight: var(--font-semibold); color: var(--text-muted); }
+.genealogy-editor-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 3px; min-height: 30px;
+  border: 1px solid var(--background-modifier-border); border-radius: var(--input-radius, 5px); background: var(--background-modifier-form-field); }
+.genealogy-editor-relation.is-picking .genealogy-editor-chips { border-color: var(--interactive-accent); box-shadow: 0 0 0 2px var(--background-modifier-border-focus); }
+.genealogy-editor-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 4px 1px 8px; border-radius: 10px; font-size: var(--font-ui-smaller);
+  background: var(--background-modifier-hover); }
+.genealogy-editor-chip.is-hypothesis { border: 1px dashed #f2bd5a; }
+.genealogy-editor-chip-remove { cursor: pointer; padding: 0 3px; color: var(--text-muted); }
+.genealogy-editor-chip-remove:hover { color: var(--text-error); }
+.genealogy-editor-chips input.genealogy-editor-pick { flex: 1; min-width: 90px; border: none; background: transparent; box-shadow: none; height: 22px; padding: 0 4px; }
+.genealogy-editor-check { display: flex; align-items: center; gap: 6px; margin-top: var(--size-4-2); font-size: var(--font-ui-small); }
+.genealogy-editor-actions { display: flex; gap: 8px; margin-top: var(--size-4-3); }
+.genealogy-editor-actions .is-disabled { opacity: 0.5; pointer-events: none; }
+.genealogy-editor-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--size-4-3); padding-top: var(--size-4-3);
+  border-top: 1px solid var(--background-modifier-border); font-size: var(--font-ui-small); color: var(--text-muted); }
+.genealogy-editor-add button { font-size: var(--font-ui-smaller); padding: 2px 8px; height: auto; }
+.genealogy-editor-idle { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; color: var(--text-muted); font-size: var(--font-ui-small); }
+
+/* The focus as buttons at the top middle. */
+.genealogy-focus-bar { position: absolute; z-index: 2; top: var(--size-4-3); left: 50%; transform: translateX(-50%); }
+.genealogy-mode-bar { display: flex; gap: 2px; padding: 2px; border-radius: 14px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); }
+.genealogy-mode-bar.is-disabled { opacity: 0.4; pointer-events: none; }
+.genealogy-view .genealogy-mode-button { height: auto; gap: 5px; padding: 3px 9px 3px 7px; border-radius: 12px; box-shadow: none; background: transparent;
+  font-size: var(--font-ui-smaller); color: var(--text-muted); justify-content: flex-start; white-space: nowrap; }
+.genealogy-view .genealogy-mode-button:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+.genealogy-view .genealogy-mode-button.is-active { color: var(--text-on-accent); background: var(--interactive-accent); }
+.genealogy-mode-icon { display: flex; }
+.genealogy-mode-icon svg { width: 14px; height: 14px; }
+
+/* The profile window: nearly full screen over the blurred, frozen graph; portrait left, facts right, the note below. */
+.genealogy-profile-container .modal-bg { opacity: 1 !important; background: color-mix(in srgb, var(--background-primary) 35%, transparent);
+  backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2); }
+.modal.genealogy-profile { position: relative; width: min(1120px, 94vw); max-width: none; height: min(92vh, 1000px); max-height: none; padding: 0; border-radius: 20px; }
+.modal.genealogy-profile > .modal-close-button, .modal.genealogy-profile > .modal-header-button, .modal.genealogy-profile > .modal-header { display: none; } /* Its own buttons are in the bar. */
+.genealogy-profile .modal-content { height: 100%; overflow-y: auto; padding: 28px 32px 36px; }
+.genealogy-profile-top { display: grid; grid-template-columns: minmax(220px, 34%) 1fr; gap: 32px; align-items: start; }
+.genealogy-profile-photo { position: sticky; top: 0; aspect-ratio: 4 / 5; border-radius: 20px; overflow: hidden; background: var(--background-secondary); }
+.genealogy-profile-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.genealogy-profile-photo.is-empty { display: grid; place-items: center; background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-secondary)); }
+.genealogy-profile-initials { font-size: 72px; font-weight: var(--font-semibold); color: color-mix(in srgb, var(--interactive-accent) 55%, var(--text-faint)); }
+.genealogy-profile-info { min-width: 0; }
+.genealogy-profile-bar { position: absolute; z-index: 1; top: 16px; right: 22px; display: flex; align-items: center; gap: 4px; padding: 2px; border-radius: 10px;
+  background: color-mix(in srgb, var(--background-primary) 85%, transparent); }
+.genealogy-view .genealogy-profile-action, .genealogy-profile .genealogy-profile-action { width: 32px; height: 32px; padding: 6px; }
+.genealogy-profile-name { margin: 0; padding-right: 170px; font-size: 28px; line-height: 1.2; } /* Clear of the corner buttons. */
+.genealogy-profile-born { margin-top: 4px; color: var(--text-muted); }
+.genealogy-profile-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.genealogy-profile-badge { padding: 2px 10px; border-radius: 999px; background: var(--background-secondary); color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.genealogy-profile-badge.is-self { background: var(--interactive-accent); color: var(--text-on-accent); }
+.genealogy-profile-badge.is-warning { background: color-mix(in srgb, var(--text-warning) 18%, transparent); color: var(--text-warning); }
+.genealogy-profile-section { margin-top: 22px; }
+.genealogy-profile-section-title { margin-bottom: 8px; color: var(--text-faint); font-size: var(--font-ui-smaller); font-weight: var(--font-semibold); text-transform: uppercase; letter-spacing: 0.06em; }
+.genealogy-profile-row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; padding: 8px 0; }
+/* Groups of relatives are told apart by a line between them. */
+.genealogy-profile-row + .genealogy-profile-row { border-top: 1px solid var(--background-modifier-border); }
+.genealogy-profile-row:has(.genealogy-profile-chips) .genealogy-profile-label { padding-top: 7px; } /* Level with the first chip. */
+.genealogy-profile-label { color: var(--text-muted); }
+.genealogy-profile-value { min-width: 0; overflow-wrap: anywhere; }
+.genealogy-profile-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.genealogy-profile .genealogy-profile-chip { display: inline-flex; align-items: center; gap: 8px; height: auto; max-width: 100%; padding: 3px 12px 3px 3px; border: none; border-radius: 999px;
+  background: var(--background-secondary); box-shadow: none; color: var(--text-normal); font-size: var(--font-ui-small); text-align: left; }
+.genealogy-profile button.genealogy-profile-chip { cursor: pointer; }
+.genealogy-profile button.genealogy-profile-chip:hover { background: color-mix(in srgb, var(--interactive-accent) 16%, var(--background-secondary)); }
+.genealogy-profile-avatar { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--interactive-accent) 14%, var(--background-primary)); color: var(--text-muted); font-size: 11px; font-weight: var(--font-semibold); }
+.genealogy-profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.genealogy-profile-chip-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.genealogy-profile-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.genealogy-profile-chip-years { color: var(--text-faint); font-size: var(--font-ui-smaller); }
+.genealogy-profile-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0 32px; margin-top: 12px; }
+.genealogy-profile-lists ul { margin: 0; padding-left: 1.2em; color: var(--text-muted); }
+.genealogy-profile-story { margin-top: 28px; padding-top: 4px; border-top: 1px solid var(--background-modifier-border); }
+.genealogy-profile-empty { padding: 18px 0 4px; color: var(--text-muted); }
+.genealogy-profile-hint { margin-top: 4px; color: var(--text-faint); font-size: var(--font-ui-small); }
+.genealogy-profile-markdown { font-size: var(--font-text-size); }
+@media (max-width: 700px) {
+  .genealogy-profile .modal-content { padding: 20px 16px 28px; }
+  .genealogy-profile-top { grid-template-columns: 1fr; gap: 18px; }
+  .genealogy-profile-photo { position: static; width: min(260px, 70%); }
+  .genealogy-profile-row { grid-template-columns: 1fr; gap: 2px; }
+  .genealogy-profile-name { padding-right: 0; margin-top: 28px; }
+}

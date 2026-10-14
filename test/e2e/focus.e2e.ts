@@ -1,0 +1,41 @@
+import { browser, expect } from '@wdio/globals';
+import { openVault, state } from './helpers';
+
+describe('[FOCUS] focus, highlight, generation by generation', () => {
+  before(() => openVault('scenarios'));
+
+  it('[FOCUS-01] «Число родственников» changes the focus and the highlight column', async () => {
+    await browser.$('.genealogy-focus-bar').$('button*=Число родственников').click();
+    expect((await state()).settings.focus).toBe('relatives');
+    await expect(browser.$$('.genealogy-generation-chip')).toBeElementsArrayOfSize({ gte: 2 });
+    await browser.$('.genealogy-focus-bar').$('button*=Поколения').click();
+    expect((await state()).settings.focus).toBe('generations');
+  });
+
+  it('[FOCUS-02] a generation chip highlights its people; «все» clears', async () => {
+    await browser.$('.genealogy-generation-rail').$('button=0').click();
+    expect((await state()).settings.highlightGenerations).toEqual([0]);
+    await expect(browser.$('.genealogy-status')).toHaveText(expect.stringContaining('0: '));
+    await browser.$('.genealogy-generation-reset').click();
+    expect((await state()).settings.highlightGenerations).toEqual([]);
+  });
+
+  it('[FOCUS-03] «Поколение за поколением» shows titles and stops on a second press', async () => {
+    await browser.$('.graph-controls .mod-close').click();
+    const play = browser.$('.graph-controls-button.mod-animate:not(.genealogy-free-button)');
+    await play.click();
+    await expect(browser.$('.genealogy-credits-title')).toHaveText(expect.stringContaining('Поколение'));
+    await play.click();
+    expect((await state()).visible).toBe((await state()).people);
+  });
+
+  it('[FOCUS-04] «Отпустить граф» keeps the layout moving until pressed again', async () => {
+    const free = browser.$('.genealogy-free-button');
+    await free.click();
+    expect((await state()).settings.freeLayout).toBe(true);
+    await browser.pause(3000);
+    expect(await browser.executeObsidian(({ app }) => (app.workspace.getLeavesOfType('genealogy-graph-view')[0].view as any).layout.running)).toBe(true);
+    await free.click();
+    expect((await state()).settings.freeLayout).toBe(false);
+  });
+});

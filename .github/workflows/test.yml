@@ -1,0 +1,67 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit:
+    name: Unit and vault tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:unit
+      - run: npm run test:vault
+      - run: npm run build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: plugin
+          path: |
+            main.js
+            manifest.json
+            styles.css
+
+  e2e:
+    name: UI tests, Obsidian ${{ matrix.obsidian }}
+    needs: unit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The plugin's minAppVersion with the oldest installer it can run on, and the latest release.
+        obsidian: ['1.8.7/earliest', 'latest/latest']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v6
+        with:
+          path: .obsidian-cache
+          key: obsidian-${{ matrix.obsidian }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: obsidian-${{ matrix.obsidian }}-
+      - name: Virtual display
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Run UI tests
+        run: xvfb-run -a npm run test:e2e
+        env:
+          OBSIDIAN_VERSIONS: ${{ matrix.obsidian }}
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: screenshots-${{ strategy.job-index }}
+          path: test-results/

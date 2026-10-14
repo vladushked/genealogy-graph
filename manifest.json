@@ -1,0 +1,10 @@
+{
+  "id": "genealogy-graph",
+  "name": "Genealogy Graph",
+  "version": "0.1.0",
+  "minAppVersion": "1.8.7",
+  "description": "Interactive genealogy graph from person note properties, with image and print export.",
+  "author": "Vladislav Plotnikov",
+  "authorUrl": "https://vladushked.github.io",
+  "isDesktopOnly": true
+}
