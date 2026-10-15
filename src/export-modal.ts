@@ -1,4 +1,4 @@
-import { Modal, Notice, type App } from 'obsidian';
+import { Modal, Notice, Platform, type App } from 'obsidian';
 import { pdfDocument, pngBlob, rasterPage, pageSize, cropMarks, svgText } from './export';
 import {
   DPIS, MIN_PT, PAPER_GROUPS, PAPERS, READINGS, canvasFits, clampCenter, fitPage, frameSize, maxDpi, mmPerUnit, nameMm,
@@ -401,6 +401,14 @@ export class ExportModal extends Modal {
         } else blob = await rasterPage(images, pages[0], this.finish(), s.dpi, s.format);
         const paper = this.paper();
         name = `genealogy-graph-${paper.group === 'custom' ? `${s.custom.w}x${s.custom.h}` : paper.id}.${s.format === 'jpeg' ? 'jpg' : s.format}`;
+      }
+      if (Platform.isMobile) {
+        // A download link does nothing in the mobile app: the file goes into the vault, next to the attachments, and opens.
+        const path = await this.app.fileManager.getAvailablePathForAttachment(name);
+        const file = await this.app.vault.createBinary(path, await blob.arrayBuffer());
+        new Notice(t().export.savedTo(file.path)); this.close();
+        void this.app.workspace.getLeaf(true).openFile(file);
+        return;
       }
       const url = URL.createObjectURL(blob);
       const anchor = createEl('a'); anchor.href = url; anchor.download = name;

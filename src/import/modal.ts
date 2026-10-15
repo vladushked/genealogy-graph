@@ -1,4 +1,4 @@
-import { Modal, Notice, normalizePath, TFile, type App } from 'obsidian';
+import { Modal, Notice, normalizePath, Platform, TFile, type App } from 'obsidian';
 import type { SqlJsStatic } from 'sql.js';
 import { isPersonCard, readFields } from '../schema';
 import { AT5_FORMAT, readAt5 } from './at5';
@@ -110,12 +110,13 @@ export class ImportModal extends Modal {
       };
       this.mediaNote = t().importer.mediaFrom(mediaDir);
     } else if (this.tree?.media.length) {
-      this.mediaNote = t().importer.mediaMissing;
+      this.mediaNote = Platform.isMobile ? t().importer.mediaMissingMobile : t().importer.mediaMissing;
     }
   }
 
   private chooseMediaFolder() {
-    const input = createEl('input', { type: 'file', attr: { webkitdirectory: '', multiple: '' } });
+    // A phone cannot pick a folder: there the photo files themselves are chosen, matched by name as from a folder.
+    const input = createEl('input', { type: 'file', attr: Platform.isMobile ? { multiple: '' } : { webkitdirectory: '', multiple: '' } });
     input.addEventListener('change', () => {
       const files = new Map(Array.from(input.files ?? []).map((file) => [file.name, file] as const));
       if (!files.size) return;
@@ -169,7 +170,7 @@ export class ImportModal extends Modal {
     folder.addEventListener('change', () => { this.options.folder = normalizePath(folder.value.trim()).replace(/^\/$/, ''); this.replan(); });
     contentEl.createEl('p', { text: words.filesTo(this.options.filesFolder, this.mediaNote) });
     if (tree.media.length && !this.readMedia) {
-      const pick = contentEl.createEl('button', { text: words.pickFolder });
+      const pick = contentEl.createEl('button', { text: Platform.isMobile ? words.pickFiles : words.pickFolder });
       pick.addEventListener('click', () => this.chooseMediaFolder());
     }
 

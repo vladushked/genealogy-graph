@@ -107,6 +107,8 @@ const TIMELAPSE_HOLD_MS = 2500;
 const TIMELAPSE_DIM = 0.45;
 /** Two clicks on the same person within this time open the note. */
 const DOUBLE_CLICK_MS = 400;
+/** Holding a finger this long on a person opens their menu, as the right click does. */
+const LONG_PRESS_MS = 500;
 /** How a problem is named in Проблемы and in the tooltip of a marked person. */
 const issueText = (issue: Issue) => `${t().graph.issues[issue.reason]} · ${issue.field}: ${issue.target}`;
 /** Opacity of people and links outside the highlighted generations. */
@@ -546,12 +548,20 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     id: number; kind: 'pan' | 'node' | 'press'; hit: Hit;
     startX: number; startY: number; lastX: number; lastY: number; originX: number; originY: number; moved: boolean;
   } | null = null;
+  /** Fingers (and pens) down on the canvas, for the pinch. */
+  private touches = new Map<number, { x: number; y: number }>();
+  /** Two fingers zooming and panning: their last distance and midpoint (client coordinates). */
+  private pinch: { distance: number; x: number; y: number } | null = null;
+  private longPressTimer: number | null = null;
+  /** The finger whose long press opened the menu: its release must not reach the menu. */
+  private longPressed: number | null = null;
   private labelLevel = 1;
   /** Zoom the wheel is gliding toward, around the pointer position (panel coordinates). */
   private wheelZoom: { target: number; x: number; y: number } | null = null;
   private wheelFrame: number | null = null;
   private wheelTime: number | null = null;
   private status!: HTMLElement;
+  private dock!: HTMLElement;
   /** The side panel with search, filters and view settings, and its folded button. */
   private controls!: HTMLElement;
   private sections = new Map<string, HTMLElement>();
@@ -607,13 +617,14 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     this.readPalette();
     this.registerEvent(this.app.workspace.on('css-change', () => { this.readPalette(); this.requestRender(); }));
     const zoomControls = this.panel.createDiv({ cls: 'genealogy-zoom' });
-    const zoomButton = (label: string, title: string, action: () => void) => {
-      const button = zoomControls.createEl('button', { text: label, attr: { type: 'button', 'aria-label': title, title } });
+    const zoomButton = (cls: string, label: string, title: string, action: () => void) => {
+      const button = zoomControls.createEl('button', { cls, text: label, attr: { type: 'button', 'aria-label': title, title } });
       button.addEventListener('click', action);
     };
-    zoomButton('+', t().graph.zoomIn, () => this.zoomBy(1.4));
-    zoomButton('−', t().graph.zoomOut, () => this.zoomBy(1 / 1.4));
-    zoomButton('⤢', t().graph.fit, () => this.followGraph());
+    // On a touch screen fingers zoom, and only «⤢» is left (styles.css).
+    zoomButton('genealogy-zoom-step', '+', t().graph.zoomIn, () => this.zoomBy(1.4));
+    zoomButton('genealogy-zoom-step', '−', t().graph.zoomOut, () => this.zoomBy(1 / 1.4));
+    zoomButton('genealogy-zoom-fit', '⤢', t().graph.fit, () => this.followGraph());
     this.status = this.panel.createDiv({ cls: 'genealogy-status' });
     this.buildControls();
     this.layout = new PhysicsClient<ForceNode>(() => {
@@ -1523,6 +1534,9 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     panel.addEventListener('pointerdown', (event) => {
       // Controls inside the panel (zoom buttons, the side panel) handle their own clicks.
       if (event.button !== 0 || !onCanvas(event)) return;
+      if (event.pointerType !== 'mouse') this.touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (this.touches.size === 2) { panel.setPointerCapture(event.pointerId); this.startPinch(); return; }
+      if (this.touches.size > 2 || this.pinch) return;
       panel.focus({ preventScroll: true });
       const hit = this.hitAt(event);
       const node = hit?.kind === 'node' ? this.nodeById.get(hit.id) : undefined;
@@ -1530,12 +1544,27 @@ class GenealogyGraphView extends ItemView implements HoverParent {
         startX: event.clientX, startY: event.clientY, lastX: event.clientX, lastY: event.clientY, originX: node?.x ?? 0, originY: node?.y ?? 0, moved: false };
       panel.setPointerCapture(event.pointerId);
       if (!hit) this.cancelWheelZoom(); // Grabbing the background stops a zoom glide, as it stops following.
+      // iOS sends no contextmenu for a held finger, so the long press is timed here.
+      if (event.pointerType !== 'mouse' && hit?.kind === 'node') {
+        const id = hit.id;
+        this.longPressTimer = window.setTimeout(() => {
+          this.longPressTimer = null;
+          const pointer = this.pointer;
+          if (!pointer || pointer.id !== event.pointerId || pointer.moved) return;
+          this.pointer = null; this.lastClick = null; this.holdMenu(pointer.id);
+          this.nodeMenu(id).showAtPosition({ x: pointer.lastX, y: pointer.lastY });
+        }, LONG_PRESS_MS);
+      }
     });
     panel.addEventListener('pointermove', (event) => {
+      if (this.touches.has(event.pointerId)) this.touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (this.pinch) { if (this.touches.has(event.pointerId)) this.movePinch(); return; }
       const pointer = this.pointer;
-      if (!pointer || pointer.id !== event.pointerId) { this.hover(event, onCanvas(event) ? this.hitAt(event) : null); return; }
-      if (!pointer.moved && Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) > 3) {
+      if (!pointer || pointer.id !== event.pointerId) { if (!this.touches.has(event.pointerId)) this.hover(event, onCanvas(event) ? this.hitAt(event) : null); return; }
+      // A finger trembles more than a mouse: it needs a longer way to count as a drag.
+      if (!pointer.moved && Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) > (event.pointerType === 'mouse' ? 3 : 8)) {
         pointer.moved = true;
+        this.cancelLongPress();
         if (pointer.kind !== 'press') this.stopFollowing(); // The camera stays put while the pointer drags.
         // A drag wakes the layout only once the pointer really moves: a plain click leaves the graph still.
         if (pointer.kind === 'node' && pointer.hit?.kind === 'node') { this.layout.fix(pointer.hit.id, pointer.originX, pointer.originY); this.layout.hold(); }
@@ -1549,9 +1578,21 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       pointer.lastX = event.clientX; pointer.lastY = event.clientY;
     });
     const finish = (event: PointerEvent, completed: boolean) => {
+      this.touches.delete(event.pointerId);
+      if (this.pinch) {
+        this.pinch = this.touches.size >= 2 ? this.pinchState() : null;
+        if (panel.hasPointerCapture(event.pointerId)) panel.releasePointerCapture(event.pointerId);
+        return;
+      }
+      if (this.longPressed === event.pointerId) {
+        this.longPressed = null;
+        if (panel.hasPointerCapture(event.pointerId)) panel.releasePointerCapture(event.pointerId);
+        return;
+      }
       const pointer = this.pointer;
       if (!pointer || pointer.id !== event.pointerId) return;
       this.pointer = null;
+      this.cancelLongPress();
       if (panel.hasPointerCapture(event.pointerId)) panel.releasePointerCapture(event.pointerId);
       const hit = pointer.hit;
       if (pointer.kind === 'node' && hit?.kind === 'node' && pointer.moved) {
@@ -1562,9 +1603,10 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       // A second click at the same spot soon after a click on a person is a double click on that person, even if the
       // camera has meanwhile moved them away from the pointer (the browser's dblclick would come too late for that).
       const last = this.lastClick;
-      if (last && !this.plugin.picker && performance.now() - last.time < DOUBLE_CLICK_MS && Math.hypot(event.clientX - last.x, event.clientY - last.y) < 6) {
+      if (last && !this.plugin.picker && performance.now() - last.time < DOUBLE_CLICK_MS && Math.hypot(event.clientX - last.x, event.clientY - last.y) < (event.pointerType === 'mouse' ? 6 : 24)) {
         this.lastClick = null;
         if (!this.special() && !this.focus.has(last.id)) { this.focus.add(last.id); this.refresh(); }
+        if (event.pointerType !== 'mouse') this.keepTouchEnd();
         this.openProfile(last.id);
         return;
       }
@@ -1580,26 +1622,13 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     panel.addEventListener('lostpointercapture', (event) => finish(event, false));
     panel.addEventListener('pointerleave', () => { if (!this.pointer) { this.setHover(null); panel.style.removeProperty('cursor'); } });
     panel.addEventListener('contextmenu', (event) => {
+      // Android also sends contextmenu for a held finger: one menu is enough.
+      if (this.longPressed !== null) { event.preventDefault(); return; }
       const hit = onCanvas(event) ? this.hitAt(event) : null;
       if (hit?.kind !== 'node') return;
       event.preventDefault();
-      const id = hit.id;
-      const menu = new Menu();
-      const words = t().graph.menu;
-      menu.addItem((item) => item.setTitle(words.profile).setIcon('id-card').onClick(() => this.openProfile(id)));
-      menu.addItem((item) => item.setTitle(words.openNote).setIcon('file-text').onClick(() => void this.plugin.openNote(id)));
-      menu.addItem((item) => item.setTitle(words.openTab).setIcon('file-plus').onClick(() => void this.plugin.openNote(id, true)));
-      menu.addItem((item) => item.setTitle(words.edit).setIcon('user-round-pen').onClick(() => { this.focusPerson(id); void this.plugin.openEditor(); }));
-      menu.addSeparator();
-      for (const relation of ['parent', 'child', 'spouse', 'sibling'] as Relation[]) {
-        menu.addItem((item) => item.setTitle(words.add(relationTitle(relation))).setIcon('plus').onClick(() => void this.plugin.startCreate(relation, id)));
-      }
-      if (this.rootsMode) {
-        menu.addItem((item) => item.setTitle(this.rootIds.includes(id) ? words.removeRoot : words.addRoot).setIcon('sprout').onClick(() => this.chooseRoot(id)));
-      } else if (!this.pathMode) {
-        menu.addItem((item) => item.setTitle(this.focus.has(id) ? words.deselect : words.select).setIcon('target').onClick(() => this.toggleFocus(id)));
-      }
-      menu.showAtMouseEvent(event);
+      if (this.pointer && this.touches.has(this.pointer.id)) { this.cancelLongPress(); this.holdMenu(this.pointer.id); this.pointer = null; }
+      this.nodeMenu(hit.id).showAtMouseEvent(event);
     });
     panel.addEventListener('auxclick', (event) => {
       if (event.button !== 1 || !onCanvas(event)) return;
@@ -1627,6 +1656,69 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       else return;
       event.preventDefault();
     });
+  }
+
+  /** The menu of a person: right click, or a long press on a touch screen. */
+  private nodeMenu(id: string): Menu {
+    const menu = new Menu();
+    const words = t().graph.menu;
+    menu.addItem((item) => item.setTitle(words.profile).setIcon('id-card').onClick(() => this.openProfile(id)));
+    menu.addItem((item) => item.setTitle(words.openNote).setIcon('file-text').onClick(() => void this.plugin.openNote(id)));
+    menu.addItem((item) => item.setTitle(words.openTab).setIcon('file-plus').onClick(() => void this.plugin.openNote(id, true)));
+    menu.addItem((item) => item.setTitle(words.edit).setIcon('user-round-pen').onClick(() => { this.focusPerson(id); void this.plugin.openEditor(); }));
+    menu.addSeparator();
+    for (const relation of ['parent', 'child', 'spouse', 'sibling'] as Relation[]) {
+      menu.addItem((item) => item.setTitle(words.add(relationTitle(relation))).setIcon('plus').onClick(() => void this.plugin.startCreate(relation, id)));
+    }
+    if (this.rootsMode) {
+      menu.addItem((item) => item.setTitle(this.rootIds.includes(id) ? words.removeRoot : words.addRoot).setIcon('sprout').onClick(() => this.chooseRoot(id)));
+    } else if (!this.pathMode) {
+      menu.addItem((item) => item.setTitle(this.focus.has(id) ? words.deselect : words.select).setIcon('target').onClick(() => this.toggleFocus(id)));
+    }
+    return menu;
+  }
+
+  /** A second finger turns the gesture into a pinch: whatever the first finger was doing stops. */
+  private startPinch() {
+    this.cancelLongPress();
+    const pointer = this.pointer;
+    this.pointer = null; this.lastClick = null;
+    if (pointer?.kind === 'node' && pointer.hit?.kind === 'node' && pointer.moved) { this.layout.fix(pointer.hit.id, null, null); this.layout.release(); }
+    this.stopFollowing(); this.cancelWheelZoom();
+    this.pinch = this.pinchState();
+  }
+
+  private pinchState(): { distance: number; x: number; y: number } {
+    const [a, b] = [...this.touches.values()];
+    return { distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+
+  /** The graph follows the fingers: the midpoint pans it, the spread zooms it around the midpoint. */
+  private movePinch() {
+    const last = this.pinch!, next = this.pinchState();
+    const rect = this.panel.getBoundingClientRect();
+    this.cameraX += next.x - last.x; this.cameraY += next.y - last.y;
+    this.zoomAround(this.zoom * next.distance / last.distance, next.x - rect.left, next.y - rect.top);
+    this.pinch = next;
+  }
+
+  /** The finger that opened a menu is still down; its release must not close the menu (see keepTouchEnd). */
+  private holdMenu(pointerId: number) {
+    this.longPressed = pointerId;
+    this.keepTouchEnd();
+  }
+
+  /**
+   * After a finger lifts, the browser follows touchend with mousedown, mouseup and click for old pages. When the touch
+   * has just opened a menu or a modal, that mousedown outside it would close it at once: touchend cancels them.
+   */
+  private keepTouchEnd() {
+    this.panel.addEventListener('touchend', (event) => { if (event.cancelable) event.preventDefault(); }, { once: true, passive: false });
+  }
+
+  private cancelLongPress() {
+    if (this.longPressTimer !== null) window.clearTimeout(this.longPressTimer);
+    this.longPressTimer = null;
   }
 
   /** Eases the zoom toward the wheel's target around the pointer, frame-rate independently. */
@@ -1685,6 +1777,8 @@ class GenealogyGraphView extends ItemView implements HoverParent {
   private fitTarget(nodes: SceneNode[], padding = 50, bottomInset = 0, topInset = 0): CameraTarget | null {
     const rect = this.viewport;
     if (!rect.width || !rect.height || !nodes.length) return null;
+    // On a phone the dock and Obsidian's navigation bar under it always cover the bottom.
+    if (document.body.hasClass('is-phone') && this.dock) bottomInset = Math.max(bottomInset, this.panel.getBoundingClientRect().bottom - this.dock.getBoundingClientRect().top);
     const bounds = sceneBounds({ nodes, edges: [] }, padding);
     const height = Math.max(rect.height / 2, rect.height - bottomInset - topInset);
     const zoom = Math.min(3, Math.max(0.1, Math.min(rect.width / bounds.width, height / bounds.height) * 0.9));
@@ -1790,9 +1884,13 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     setIcon(open, 'settings');
     const close = this.controls.createDiv({ cls: 'clickable-icon graph-controls-button mod-close', attr: { 'aria-label': words.controlsClose } });
     setIcon(close, 'x');
-    const setOpen = (value: boolean) => {
-      settings.controls.open = value;
+    // On a phone the open panel covers half the graph: it starts folded there, and folding it there is not remembered
+    // for the computer, which shares the settings through the vault.
+    const phone = document.body.hasClass('is-phone');
+    const setOpen = (value: boolean, save = true) => {
       this.controls.toggleClass('is-close', !value);
+      if (!save || phone) return;
+      settings.controls.open = value;
       this.plugin.requestSave();
     };
     open.addEventListener('click', () => setOpen(true));
@@ -1827,7 +1925,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
         this.plugin.requestSave();
       });
     }
-    setOpen(settings.controls.open);
+    setOpen(settings.controls.open && !phone, false);
 
     // Problems: a button in the other corner, shown only when there are any; their list opens under it.
     const corner = this.panel.createDiv({ cls: 'genealogy-corner' });
@@ -1855,7 +1953,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     this.nodePlus.hide();
     // The bottom dock, as a search widget on a phone: «Маршрут родства», the search field and «+».
     // The search field stays across updates, so typing is never interrupted.
-    const dock = this.panel.createDiv({ cls: 'genealogy-dock' });
+    const dock = this.dock = this.panel.createDiv({ cls: 'genealogy-dock' });
     // In path mode a card above the dock shows both route ends, who is still to choose, and the route found.
     this.routeCard = dock.createDiv({ cls: 'genealogy-route-card' });
     this.routeCard.hide();
@@ -2055,7 +2153,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       for (const [value, icon, label, title] of options) {
         const button = el.createEl('button', { cls: 'genealogy-mode-button', attr: { type: 'button', 'aria-label': title } });
         setIcon(button.createSpan({ cls: 'genealogy-mode-icon' }), icon);
-        button.createSpan({ text: label });
+        button.createSpan({ cls: 'genealogy-mode-label', text: label });
         button.toggleClass('is-active', value === current);
         button.addEventListener('click', () => { if (value !== current) choose(value); });
       }

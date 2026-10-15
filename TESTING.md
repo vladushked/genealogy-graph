@@ -60,8 +60,13 @@ Each test names its scenario id in its title.
 | IMPORT-03 | A person already in the vault is completed, not duplicated | imports + scenarios | vault |
 | IMPORT-05…07 | The import dialog: summary, cards in family folders, report note, re-import, refusal | empty | UI |
 | EXPORT-01…02 | Print PDF with a notice of letters no font has; screen SVG | scenarios | UI |
+| TOUCH-01…05 | Touch: two-finger pinch zooms, a held finger opens the person menu and lifting it keeps the menu, a tap selects, a double tap opens the profile and it stays; on a phone the export is saved into the vault | scenarios | UI |
 | I18N-01…04 | Switching the language redraws the graph, tab and controls with no Russian left; the settings tab; an English vault from the start | scenarios, international | UI |
 | SCALE-01…03 | A thousand people build without problems, open and settle, survive dragging | scale-500, scale-1000 | vault, UI |
+
+## Phone screenshots
+
+`npm run phone` opens the `showcase` vault in Obsidian's own mobile mode (`app.emulateMobile`) on a screen the size of an iPhone 16 Pro Max (430×932, 3x) with touch input, and saves screenshots to `test-results/phone/`: the graph, the side panel, a selected person, the long-press menu, the profile, the route, «Уточнить», export (`wdio.phone.conf.mts`, `test/e2e/phone.shots.ts`). It is Chromium, not iOS WebKit: the layout and the gestures show, Safari's own quirks do not. To look by hand: `app.emulateMobile(true)` in the developer console of Obsidian, a narrow window or DevTools' device toolbar (`Ctrl+Shift+M`); `app.emulateMobile(false)` returns.
 
 ## README media
 
