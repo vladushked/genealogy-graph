@@ -36,6 +36,23 @@ describe('[I18N] the interface language', () => {
     expect(text).toContain('For example: Озерова Светлана Борисовна (Кравченко) 1915-1980.md');
   });
 
+  it('[I18N-02b] Obsidian 1.13+: settings come as definitions, so they are found by the settings search', async function () {
+    const declarative = await browser.executeObsidian(({ obsidian }) => obsidian.requireApiVersion('1.13.0'));
+    if (!declarative) return this.skip();
+    const found = await browser.executeObsidian(({ app, obsidian }) => {
+      const tab = (app as any).setting.pluginTabs.find((item: { id: string }) => item.id === 'genealogy-graph');
+      const items = (tab.settingItems as Array<{ heading?: string; items: Array<{ name: string; render(setting: unknown): void }> }>);
+      const rows = items.flatMap((group) => group.items);
+      // A row renders its own control, as the settings window does.
+      const host = document.createElement('div');
+      rows.find((row) => row.name === 'File name of new cards')!.render(new obsidian.Setting(host));
+      return { headings: items.map((group) => group.heading ?? ''), names: rows.map((row) => row.name), rendered: host.textContent ?? '' };
+    });
+    expect(found.headings).toEqual(['', 'Names', 'New cards', 'Other']);
+    expect(found.names).toEqual(expect.arrayContaining(['Language', 'Name scheme', 'File name of new cards', 'Fonts for PDF']));
+    expect(found.rendered).toContain('For example: Озерова Светлана Борисовна (Кравченко) 1915-1980.md');
+  });
+
   it('[I18N-03] back to Russian', async () => {
     await setSettings({ language: 'ru' });
     expect(await tabTitle()).toBe('Родословный граф');

@@ -1,4 +1,4 @@
-import { AbstractInputSuggest, App, ItemView, Menu, Notice, Plugin, PluginSettingTab, Scope, Setting, TFile, getLanguage, normalizePath, setIcon, type HoverParent, type HoverPopover, type TAbstractFile, type WorkspaceLeaf } from 'obsidian';
+import { AbstractInputSuggest, App, ItemView, Menu, Notice, Plugin, PluginSettingTab, Scope, Setting, TFile, getLanguage, normalizePath, requireApiVersion, setIcon, type SettingDefinitionItem, type HoverParent, type HoverPopover, type TAbstractFile, type WorkspaceLeaf } from 'obsidian';
 import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY } from 'd3-force';
 import { references, adjacency, ancestry, applyCuts, kinAround, buildGraph, edgeKey, problemPeople, hiddenBehind, proposeCut, reachable, shortestPath, type Cut, type Edge, type Graph, type Issue, type GraphPath, type RawPerson } from './model';
 import { groupOf, inFolder, normalizeFolder, relativeGroups, restoreSettings, type SettingsData } from './settings';
@@ -129,6 +129,7 @@ export default class GenealogyGraphPlugin extends Plugin {
   settings: SettingsData = restoreSettings(null);
   graph: Graph = { people: [], edges: [], issues: [] };
   views = new Set<GenealogyGraphView>();
+  private settingsTab: GenealogySettingsTab | null = null;
   generationRange: GenerationRange | null = null;
   /** Bumped whenever the graph changes. */
   graphVersion = 0;
@@ -167,7 +168,8 @@ export default class GenealogyGraphPlugin extends Plugin {
     this.addCommand({ id: 'open-graph', name: words.commands.openGraph, callback: () => void this.openGraph() });
     this.addCommand({ id: 'focus-current-person', name: words.commands.focusCurrent, callback: () => void this.focusCurrent() });
     this.addCommand({ id: 'import-family-tree', name: words.commands.importTree, callback: () => this.openImport() });
-    this.addSettingTab(new GenealogySettingsTab(this.app, this));
+    this.settingsTab = new GenealogySettingsTab(this.app, this);
+    this.addSettingTab(this.settingsTab);
     // Only person notes and images can change the graph; edits elsewhere in the vault are ignored.
     this.registerEvent(this.app.metadataCache.on('changed', (file) => {
       if (this.personIds.has(file.path) || this.isPersonFile(file)) { this.changedPaths.add(file.path); this.scheduleRefresh(); }
@@ -216,6 +218,8 @@ export default class GenealogyGraphPlugin extends Plugin {
     await this.refreshGraph();
     for (const view of [...this.views]) await view.redraw();
     this.editor()?.redraw();
+    // Obsidian 1.13+ keeps the settings' names for its search: give it the new language.
+    if (requireApiVersion('1.13.0')) this.settingsTab?.update();
   }
 
   /** Debounced save for controls that fire continuously, such as color pickers. */
@@ -2332,91 +2336,113 @@ class PersonSuggest extends AbstractInputSuggest<ForceNode> {
   }
 }
 
+/** A row of the settings tab: its name and description, and the control added to it. */
+interface SettingsRow { name: string; desc: string; control: (setting: Setting) => unknown }
+
+/**
+ * The settings, described once. Obsidian 1.13+ renders them from getSettingDefinitions(), which also puts them
+ * in the settings search; earlier versions call display().
+ */
 class GenealogySettingsTab extends PluginSettingTab {
   constructor(app: App, private plugin: GenealogyGraphPlugin) { super(app, plugin); }
+
+  getSettingDefinitions(): SettingDefinitionItem[] {
+    return this.groups().map(({ heading, rows }) => ({
+      type: 'group' as const, heading,
+      items: rows.map((row) => ({ name: row.name, desc: row.desc, render: (setting: Setting) => { setting.setName(row.name).setDesc(row.desc); row.control(setting); } })),
+    }));
+  }
+
   display() {
+    this.containerEl.empty();
+    for (const { heading, rows } of this.groups()) {
+      if (heading) new Setting(this.containerEl).setName(heading).setHeading();
+      for (const row of rows) row.control(new Setting(this.containerEl).setName(row.name).setDesc(row.desc));
+    }
+  }
+
+  private groups(): Array<{ heading?: string; rows: SettingsRow[] }> {
     const settings = this.plugin.settings;
     const words = t().settings;
-    this.containerEl.empty();
-    new Setting(this.containerEl).setName(words.language).setDesc(words.languageDesc)
-      .addDropdown((dropdown) => {
-        for (const [value, label] of Object.entries(words.languageOptions)) dropdown.addOption(value, label);
-        dropdown.setValue(settings.language).onChange(async (value) => {
-          settings.language = value === 'en' || value === 'ru' ? value : 'auto';
-          await this.plugin.saveSettings();
-          await this.plugin.languageChanged();
-          this.display();
-        });
-      });
-    new Setting(this.containerEl).setName(words.self).setDesc(words.selfDesc)
-      .addDropdown((dropdown) => {
-        dropdown.addOption('', words.notChosen);
-        const people = [...this.plugin.graph.people].sort((a, b) => a.name.localeCompare(b.name));
-        for (const person of people) dropdown.addOption(person.id, `${person.name} · ${person.id}`);
-        if (settings.selfPersonId && !people.some((person) => person.id === settings.selfPersonId)) {
-          dropdown.addOption(settings.selfPersonId, words.notFound(settings.selfPersonId));
-        }
-        dropdown.setValue(settings.selfPersonId);
-        dropdown.onChange((value) => { settings.selfPersonId = value; void this.plugin.saveSettings(); this.plugin.settingsChanged('self'); });
-      });
-    new Setting(this.containerEl).setName(words.filesFolder).setDesc(words.filesFolderDesc)
-      .addText((text) => text.setPlaceholder(this.plugin.filesFolder()).setValue(settings.filesFolder).onChange((value) => {
-        settings.filesFolder = normalizeFolder(value);
-        this.plugin.requestSave();
-      }));
-
-    new Setting(this.containerEl).setName(words.names).setHeading();
-    const example = this.containerEl.createDiv();
-    const showExample = () => example.setText(words.fileNameExample(`${exampleName(settings.nameScheme, settings.fileNameTemplate)}.md`));
-    new Setting(this.containerEl).setName(words.nameScheme).setDesc(words.nameSchemeDesc)
-      .addDropdown((dropdown) => {
-        for (const scheme of NAME_SCHEMES) dropdown.addOption(scheme, words.schemes[scheme]);
-        dropdown.setValue(settings.nameScheme).onChange((value) => {
-          settings.nameScheme = value as NameScheme;
-          void this.plugin.saveSettings();
-          showExample();
-          this.plugin.scheduleRefresh();
-        });
-      });
-    const fileName = new Setting(this.containerEl).setName(words.fileName).setDesc(words.fileNameDesc)
-      .addText((text) => text.setPlaceholder(DEFAULT_FILE_NAME).setValue(settings.fileNameTemplate).onChange((value) => {
-        settings.fileNameTemplate = value.trim() || DEFAULT_FILE_NAME;
-        this.plugin.requestSave();
-        showExample();
-      }));
-    fileName.descEl.appendChild(example);
-    example.addClass('genealogy-settings-example');
-    showExample();
-
-    new Setting(this.containerEl).setName(words.newCards).setHeading();
-    new Setting(this.containerEl).setName(words.cardsFolder).setDesc(words.cardsFolderDesc)
-      .addText((text) => text.setPlaceholder(words.vaultRoot).setValue(settings.cardsFolder).onChange((value) => {
-        settings.cardsFolder = normalizeFolder(value);
-        this.plugin.requestSave();
-      }));
-    new Setting(this.containerEl).setName(words.cardTemplate).setDesc(words.cardTemplateDesc)
-      .addText((text) => text.setPlaceholder(words.templatePlaceholder).setValue(settings.cardTemplate).onChange((value) => {
-        settings.cardTemplate = value.trim();
-        this.plugin.requestSave();
-      }));
-    new Setting(this.containerEl).setName(words.rename).setDesc(words.renameDesc)
-      .addToggle((toggle) => toggle.setValue(settings.renameCards).onChange((value) => {
-        settings.renameCards = value;
-        this.plugin.requestSave();
-      }));
-
-    new Setting(this.containerEl).setName(words.other).setHeading();
-    new Setting(this.containerEl).setName(words.exportFonts).setDesc(words.exportFontsDesc)
-      .addTextArea((text) => text.setPlaceholder('fonts/NotoSansSC-Regular.ttf').setValue(settings.exportFonts.join('\n')).onChange((value) => {
-        settings.exportFonts = value.split('\n').map((line) => line.trim()).filter(Boolean);
-        this.plugin.requestSave();
-      }));
-    new Setting(this.containerEl).setName(words.templatesFolder).setDesc(words.templatesFolderDesc)
-      .addText((text) => text.setPlaceholder('Templates').setValue(settings.templatesFolder).onChange((value) => {
-        settings.templatesFolder = normalizeFolder(value);
-        this.plugin.requestSave();
-        this.plugin.scheduleRefresh();
-      }));
+    return [
+      { rows: [
+        { name: words.language, desc: words.languageDesc, control: (setting) => setting.addDropdown((dropdown) => {
+          for (const [value, label] of Object.entries(words.languageOptions)) dropdown.addOption(value, label);
+          dropdown.setValue(settings.language).onChange(async (value) => {
+            settings.language = value === 'en' || value === 'ru' ? value : 'auto';
+            await this.plugin.saveSettings();
+            // languageChanged() refreshes the definitions on Obsidian 1.13+; earlier versions draw the tab again.
+            await this.plugin.languageChanged();
+            if (!requireApiVersion('1.13.0')) this.display();
+          });
+        }) },
+        { name: words.self, desc: words.selfDesc, control: (setting) => setting.addDropdown((dropdown) => {
+          dropdown.addOption('', words.notChosen);
+          const people = [...this.plugin.graph.people].sort((a, b) => a.name.localeCompare(b.name));
+          for (const person of people) dropdown.addOption(person.id, `${person.name} · ${person.id}`);
+          if (settings.selfPersonId && !people.some((person) => person.id === settings.selfPersonId)) {
+            dropdown.addOption(settings.selfPersonId, words.notFound(settings.selfPersonId));
+          }
+          dropdown.setValue(settings.selfPersonId);
+          dropdown.onChange((value) => { settings.selfPersonId = value; void this.plugin.saveSettings(); this.plugin.settingsChanged('self'); });
+        }) },
+        { name: words.filesFolder, desc: words.filesFolderDesc, control: (setting) => setting
+          .addText((text) => text.setPlaceholder(this.plugin.filesFolder()).setValue(settings.filesFolder).onChange((value) => {
+            settings.filesFolder = normalizeFolder(value);
+            this.plugin.requestSave();
+          })) },
+      ] },
+      { heading: words.names, rows: [
+        { name: words.nameScheme, desc: words.nameSchemeDesc, control: (setting) => setting.addDropdown((dropdown) => {
+          for (const scheme of NAME_SCHEMES) dropdown.addOption(scheme, words.schemes[scheme]);
+          dropdown.setValue(settings.nameScheme).onChange((value) => {
+            settings.nameScheme = value as NameScheme;
+            void this.plugin.saveSettings();
+            this.containerEl.querySelectorAll('.genealogy-settings-example').forEach((el) => el.setText(fileNameExample()));
+            this.plugin.scheduleRefresh();
+          });
+        }) },
+        { name: words.fileName, desc: words.fileNameDesc, control: (setting) => {
+          const example = setting.descEl.createDiv({ cls: 'genealogy-settings-example', text: fileNameExample() });
+          setting.addText((text) => text.setPlaceholder(DEFAULT_FILE_NAME).setValue(settings.fileNameTemplate).onChange((value) => {
+            settings.fileNameTemplate = value.trim() || DEFAULT_FILE_NAME;
+            this.plugin.requestSave();
+            example.setText(fileNameExample());
+          }));
+        } },
+      ] },
+      { heading: words.newCards, rows: [
+        { name: words.cardsFolder, desc: words.cardsFolderDesc, control: (setting) => setting
+          .addText((text) => text.setPlaceholder(words.vaultRoot).setValue(settings.cardsFolder).onChange((value) => {
+            settings.cardsFolder = normalizeFolder(value);
+            this.plugin.requestSave();
+          })) },
+        { name: words.cardTemplate, desc: words.cardTemplateDesc, control: (setting) => setting
+          .addText((text) => text.setPlaceholder(words.templatePlaceholder).setValue(settings.cardTemplate).onChange((value) => {
+            settings.cardTemplate = value.trim();
+            this.plugin.requestSave();
+          })) },
+        { name: words.rename, desc: words.renameDesc, control: (setting) => setting
+          .addToggle((toggle) => toggle.setValue(settings.renameCards).onChange((value) => {
+            settings.renameCards = value;
+            this.plugin.requestSave();
+          })) },
+      ] },
+      { heading: words.other, rows: [
+        { name: words.exportFonts, desc: words.exportFontsDesc, control: (setting) => setting
+          .addTextArea((text) => text.setPlaceholder('fonts/NotoSansSC-Regular.ttf').setValue(settings.exportFonts.join('\n')).onChange((value) => {
+            settings.exportFonts = value.split('\n').map((line) => line.trim()).filter(Boolean);
+            this.plugin.requestSave();
+          })) },
+        { name: words.templatesFolder, desc: words.templatesFolderDesc, control: (setting) => setting
+          .addText((text) => text.setPlaceholder('Templates').setValue(settings.templatesFolder).onChange((value) => {
+            settings.templatesFolder = normalizeFolder(value);
+            this.plugin.requestSave();
+            this.plugin.scheduleRefresh();
+          })) },
+      ] },
+    ];
+    function fileNameExample() { return words.fileNameExample(`${exampleName(settings.nameScheme, settings.fileNameTemplate)}.md`); }
   }
 }
 
