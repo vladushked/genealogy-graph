@@ -1,5 +1,5 @@
 import { browser, expect } from '@wdio/globals';
-import { expected, openVault, showNode, vaultFiles } from './helpers';
+import { expected, openVault, showNode, vaultFiles, openControls } from './helpers';
 
 /** Graph input on a touch screen: the gestures of a phone, sent as real touch pointers. */
 const camera = () => browser.executeObsidian(({ app }) => {
@@ -65,8 +65,9 @@ describe('[TOUCH] touch screen', () => {
   });
 
   it('[TOUCH-05] on a phone the export is saved into the vault, as a download does nothing there', async () => {
-    await browser.executeObsidian(({ obsidian }) => { (obsidian.Platform as { isMobile: boolean }).isMobile = true; });
+    const wasMobile = await browser.executeObsidian(({ obsidian }) => { const platform = obsidian.Platform as { isMobile: boolean }; const was = platform.isMobile; platform.isMobile = true; return was; });
     try {
+      await openControls();
       const header = browser.$('.graph-control-section-header=Экспорт');
       const section = header.parentElement().parentElement().parentElement();
       if ((await section.getAttribute('class')).includes('is-collapsed')) await header.click();
@@ -79,7 +80,7 @@ describe('[TOUCH] touch screen', () => {
       await browser.waitUntil(async () => (await vaultFiles()).some((path) => path.endsWith('genealogy-graph.svg')), { timeout: 30000, timeoutMsg: 'the SVG is not in the vault' });
       await expect(browser.$('.notice-container')).toHaveText(expect.stringContaining('Граф сохранён в хранилище'));
     } finally {
-      await browser.executeObsidian(({ obsidian }) => { (obsidian.Platform as { isMobile: boolean }).isMobile = false; });
+      await browser.executeObsidian(({ obsidian }, was) => { (obsidian.Platform as { isMobile: boolean }).isMobile = was; }, wasMobile);
     }
   });
 });

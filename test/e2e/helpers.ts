@@ -12,15 +12,33 @@ export const importFile = (name: string) => path.join(FIXTURES, 'imports', name)
 
 const PLUGIN = 'genealogy-graph';
 
+/**
+ * The layout the UI tests run in: the computer (default), or Obsidian's own mobile mode (app.emulateMobile) in a window
+ * the size of a phone or a tablet, set by LAYOUT=phone|tablet (npm run test:e2e:phone, test:e2e:tablet).
+ */
+export const LAYOUT = (process.env.LAYOUT ?? 'desktop') as 'desktop' | 'phone' | 'tablet';
+const WINDOW: Record<typeof LAYOUT, [number, number]> = { desktop: [1600, 1000], phone: [430, 932], tablet: [1180, 820] };
+
+/** Turns Obsidian's mobile mode on or off (the app reloads) and sizes the window for `layout`. */
+export async function useLayout(layout: typeof LAYOUT) {
+  const mobile = layout !== 'desktop';
+  if (await browser.execute(() => document.body.classList.contains('emulate-mobile')) !== mobile) {
+    await browser.executeObsidian(({ app }, mobile) => { (app as unknown as { emulateMobile(on: boolean): void }).emulateMobile(mobile); }, mobile);
+    await browser.waitUntil(() => browser.execute((mobile) => document.body?.classList.contains('emulate-mobile') === mobile && Boolean((window as unknown as { app?: { workspace?: { layoutReady?: boolean } } }).app?.workspace?.layoutReady), mobile),
+      { timeout: 30000, interval: 300, timeoutMsg: 'the app did not reload in the new mode' });
+  }
+  // WebDriver cannot resize an Electron window; Obsidian's own Electron can.
+  await browser.executeObsidian((_, width, height) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const remote = (window as unknown as { require(id: string): { getCurrentWindow(): { setSize(w: number, h: number): void; unmaximize(): void } } }).require('@electron/remote');
+    const win = remote.getCurrentWindow(); win.unmaximize(); win.setSize(width, height);
+  }, ...WINDOW[layout]);
+}
+
 /** Opens a fresh copy of a test vault and the graph in it; errors in the console from then on are collected. */
 export async function openVault(name: string, { graph = true } = {}) {
   await browser.reloadObsidian({ vault: vaultDir(name) });
-  // WebDriver cannot resize an Electron window; Obsidian's own Electron can.
-  await browser.executeObsidian(() => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const remote = (window as unknown as { require(id: string): { getCurrentWindow(): { setSize(w: number, h: number): void; unmaximize(): void } } }).require('@electron/remote');
-    const win = remote.getCurrentWindow(); win.unmaximize(); win.setSize(1600, 1000);
-  });
+  await useLayout(LAYOUT);
   await browser.pause(300);
   await browser.executeObsidian(() => {
     const errors: string[] = [];
@@ -90,6 +108,7 @@ export function state() {
  * glide, so the point is exact.
  */
 export async function showNode(id: string): Promise<{ x: number; y: number }> {
+  await clearGraph();
   await waitSettled();
   const point = await browser.executeObsidian(({ app }, id) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,6 +124,34 @@ export async function showNode(id: string): Promise<{ x: number; y: number }> {
   }, id);
   if (!point) throw new Error(`${id} is not on the graph`);
   return point;
+}
+
+/**
+ * On a phone or a tablet Obsidian's sidebars are drawers over the graph, and on a phone the open side panel covers it:
+ * before the graph is touched they are put away, as one would do with a finger.
+ */
+export async function clearGraph() {
+  if (LAYOUT === 'desktop') return;
+  await browser.executeObsidian(({ app }) => { app.workspace.leftSplit.collapse(); app.workspace.rightSplit.collapse(); });
+  if (LAYOUT === 'phone') await browser.execute(() => (document.querySelector('.genealogy-controls:not(.is-close) .mod-close') as HTMLElement | null)?.click());
+  await browser.pause(300);
+}
+
+/** The side form in sight: on a phone or a tablet its drawer is opened, as one would to edit. */
+export async function showEditor() {
+  if (LAYOUT === 'desktop') return;
+  await browser.executeObsidian(({ app }) => { app.workspace.rightSplit.expand(); });
+  await browser.pause(300);
+}
+
+/** The side panel of the graph, folded: on a phone it is folded already at start. */
+export async function closeControls() {
+  await browser.execute(() => (document.querySelector('.genealogy-controls:not(.is-close) .mod-close') as HTMLElement | null)?.click());
+}
+
+/** The side panel of the graph, opened: on a phone it starts folded. */
+export async function openControls() {
+  await browser.execute(() => (document.querySelector('.genealogy-controls.is-close .mod-open') as HTMLElement | null)?.click());
 }
 
 /** A real click on a person: Shift held, or a double click, or the right button. */
@@ -123,6 +170,7 @@ export async function clickNode(id: string, { shift = false, double = false, rig
 
 /** A click at a point of the graph in its own units (an empty spot, a link). */
 export async function clickGraphPoint(gx: number, gy: number) {
+  await clearGraph();
   await waitSettled();
   const { x, y } = await browser.executeObsidian(({ app }, gx, gy) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -195,6 +243,7 @@ export const formValues = () => browser.executeObsidian(() => [...document.query
 
 /** A field of the side form by its label: a text input or a dropdown. */
 export async function formField(label: string) {
+  await showEditor();
   const row = browser.$('.genealogy-editor').$(`label=${label}`).parentElement();
   const select = row.$('select');
   return (await select.isExisting()) ? select : row.$('input');

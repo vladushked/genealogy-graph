@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { browser } from '@wdio/globals';
-import { expected, openGraph, openVault, showNode, waitIndexed, waitSettled } from './helpers';
+import { expected, openGraph, openVault, showNode, useLayout, waitSettled } from './helpers';
 
 /**
  * Obsidian's own mobile mode (app.emulateMobile) on a screen the size of an iPhone 16 Pro Max, with touch input, and
@@ -14,15 +14,12 @@ const shot = async (name: string) => { await browser.pause(400); await browser.s
 const finger = () => browser.action('pointer', { id: 'finger', parameters: { pointerType: 'touch' } });
 const tap = async (selector: string) => { await browser.execute((selector) => (document.querySelector(selector) as HTMLElement | null)?.click(), selector); await browser.pause(300); };
 
+/** The phone layout, and touch input for the gestures. */
 async function phoneScreen() {
-  await browser.executeObsidian(({ app }) => { (app as unknown as { emulateMobile(on: boolean): void }).emulateMobile(true); });
-  await browser.pause(4000); // The app reloads.
-  await waitIndexed();
+  await useLayout('phone');
   await browser.executeObsidian((_, width, height) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const remote = (window as any).require('@electron/remote');
-    const win = remote.getCurrentWindow(); win.unmaximize(); win.setSize(width, height + 40);
-    const contents = remote.getCurrentWebContents();
+    const contents = (window as any).require('@electron/remote').getCurrentWebContents();
     try { contents.debugger.attach('1.3'); } catch { /* already attached */ }
     void contents.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 3, mobile: true });
     void contents.debugger.sendCommand('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });

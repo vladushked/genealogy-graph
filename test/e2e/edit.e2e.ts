@@ -1,8 +1,9 @@
 import { browser, expect } from '@wdio/globals';
-import { clickNode, fillForm, selectOnly, formValues, frontmatter, openVault, setSettings, state, waitFile, waitPeople } from './helpers';
+import { clickNode, fillForm, selectOnly, formValues, frontmatter, openVault, setSettings, showEditor, state, waitFile, waitPeople } from './helpers';
 
-const save = () => browser.$('.genealogy-editor-actions .mod-cta').click();
-const addRelative = (label: string) => browser.$('.genealogy-editor-add').$(`button=${label}`).click();
+const save = async () => { await showEditor(); await browser.$('.genealogy-editor-actions .mod-cta').click(); };
+const addRelative = async (label: string) => { await showEditor(); await browser.$('.genealogy-editor-add').$(`button=${label}`).click(); };
+const closeEditor = async () => { await showEditor(); await browser.$('.genealogy-editor-close').click(); };
 
 describe('[EDIT] building a family tree from an empty vault', () => {
   before(() => openVault('empty'));
@@ -60,7 +61,7 @@ describe('[EDIT] name hints in other schemes', () => {
     await addRelative('child');
     await fillForm({ Sex: 'male' });
     expect(await formValues()).toContain('García Barcha');
-    await browser.$('.genealogy-editor-close').click();
+    await closeEditor();
   });
 
   it('[EDIT-07] Icelandic: a daughter of Jón Sigurðsson is Jónsdóttir, and no surname is asked first', async () => {
@@ -71,6 +72,6 @@ describe('[EDIT] name hints in other schemes', () => {
     const labels = await browser.$$('.genealogy-editor-row label').map((label) => label.getText());
     expect(labels.slice(0, 3)).toEqual(['Given name', 'Patronymic', 'Family name']);
     expect(await formValues()).toContain('Jónsdóttir');
-    await browser.$('.genealogy-editor-close').click();
+    await closeEditor();
   });
 });

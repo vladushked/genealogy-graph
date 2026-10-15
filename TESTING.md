@@ -64,6 +64,15 @@ Each test names its scenario id in its title.
 | I18N-01…04 | Switching the language redraws the graph, tab and controls with no Russian left; the settings tab; an English vault from the start | scenarios, international | UI |
 | SCALE-01…03 | A thousand people build without problems, open and settle, survive dragging | scale-500, scale-1000 | vault, UI |
 
+## Phone and tablet layouts
+
+The UI tests also run in Obsidian's own mobile mode (`app.emulateMobile`): `npm run test:e2e:phone` (a 430×932 window, Obsidian's phone layout) and `npm run test:e2e:tablet` (1180×820, the tablet layout), set by `LAYOUT=phone|tablet` in `openVault` (`test/e2e/helpers.ts`); CI runs both on the latest Obsidian. On those layouts the tests do what a finger would: put Obsidian's sidebar drawers and the side panel away before touching the graph (`clearGraph`), open the editor drawer to fill the form (`showEditor`), open the folded side panel (`openControls`). The export is saved into the vault there, and the export tests read it from the vault.
+
+| ID | What | Vault | Kind |
+| --- | --- | --- | --- |
+| LAYOUT-01 | Every button over the graph shows its icon and its whole text (on a tablet Obsidian pads every button) | scenarios | UI |
+| LAYOUT-02 | The controls over the graph do not cover each other or leave it; Obsidian's navigation bar covers none of them | scenarios | UI |
+
 ## Phone screenshots
 
 `npm run phone` opens the `showcase` vault in Obsidian's own mobile mode (`app.emulateMobile`) on a screen the size of an iPhone 16 Pro Max (430×932, 3x) with touch input, and saves screenshots to `test-results/phone/`: the graph, the side panel, a selected person, the long-press menu, the profile, the route, «Уточнить», export (`wdio.phone.conf.mts`, `test/e2e/phone.shots.ts`). It is Chromium, not iOS WebKit: the layout and the gestures show, Safari's own quirks do not. To look by hand: `app.emulateMobile(true)` in the developer console of Obsidian, a narrow window or DevTools' device toolbar (`Ctrl+Shift+M`); `app.emulateMobile(false)` returns.

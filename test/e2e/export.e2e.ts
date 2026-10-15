@@ -1,5 +1,5 @@
 import { browser, expect } from '@wdio/globals';
-import { openVault } from './helpers';
+import { LAYOUT, openControls, openVault } from './helpers';
 
 /**
  * Catches the files the dialog saves: the blob behind each link it clicks to download. Object URLs keep working, as
@@ -15,10 +15,23 @@ const captureDownloads = () => browser.executeObsidian(() => {
     if (blob && this.download) win.exported.push({ blob, name: this.download });
   };
 });
-const exported = () => browser.executeObsidian(async () => Promise.all((window as unknown as { exported: Array<{ blob: Blob; name: string }> }).exported
-  .map(async ({ blob, name }) => ({ type: blob.type, size: blob.size, name, head: await blob.slice(0, 600).text() }))));
+/** The saved files in order: downloads on a computer; on a phone or a tablet, files the dialog writes into the vault. */
+const exported = () => LAYOUT === 'desktop'
+  ? browser.executeObsidian(async () => Promise.all((window as unknown as { exported: Array<{ blob: Blob; name: string }> }).exported
+    .map(async ({ blob, name }) => ({ type: blob.type, size: blob.size, name, head: await blob.slice(0, 600).text() }))))
+  : browser.executeObsidian(async ({ app }) => {
+    const types: Record<string, string> = { pdf: 'application/pdf', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg' };
+    const files = app.vault.getFiles().filter((file) => /^genealogy-graph.*\.(pdf|svg|png|jpg)$/.test(file.name)).sort((a, b) => a.stat.ctime - b.stat.ctime);
+    return Promise.all(files.map(async (file) => {
+      const bytes = await app.vault.readBinary(file);
+      return { type: types[file.extension], size: bytes.byteLength, name: file.name, head: new TextDecoder().decode(bytes.slice(0, 600)) };
+    }));
+  });
 
 async function openExport() {
+  // On a phone the saved file opens in a tab of its own: the graph is brought back first.
+  await browser.executeObsidian(async ({ app }) => { await app.workspace.revealLeaf(app.workspace.getLeavesOfType('genealogy-graph-view')[0]); });
+  await openControls();
   const header = browser.$('.graph-control-section-header=Экспорт');
   const section = header.parentElement().parentElement().parentElement();
   if ((await section.getAttribute('class')).includes('is-collapsed')) await header.click();

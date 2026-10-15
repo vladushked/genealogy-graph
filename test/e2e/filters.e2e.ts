@@ -1,8 +1,9 @@
 import { browser, expect } from '@wdio/globals';
-import { clickGraphPoint, clickNode, openVault, state, waitSettled } from './helpers';
+import { clickGraphPoint, clickNode, openControls, openVault, state, waitSettled } from './helpers';
 
 /** The settings panel section of the graph, opened. */
 async function section(title: string) {
+  await openControls();
   const header = browser.$(`.graph-control-section-header=${title}`);
   const item = header.parentElement().parentElement().parentElement();
   if ((await item.getAttribute('class')).includes('is-collapsed')) await header.click();
@@ -44,7 +45,10 @@ describe('[FILTERS] filters and hidden branches', () => {
       view.stopFollowing(); view.snapCamera({ cx: pyotr.x, cy: pyotr.y, zoom: 1 }); view.render();
       const target = [...view.links.values()].find((link: any) => link.edges.some((edge: any) => edge.to === pyotr.id && edge.relation === 'parent') && link.line);
       if (!target) return null;
-      return { x: (target.line.x1 + target.line.x2) / 2, y: (target.line.y1 + target.line.y2) / 2 };
+      // The middle of the link in the middle of the screen: on a phone the generation rail covers the left edge.
+      const mid = { x: (target.line.x1 + target.line.x2) / 2, y: (target.line.y1 + target.line.y2) / 2 };
+      view.snapCamera({ cx: mid.x, cy: mid.y, zoom: 1 }); view.render();
+      return mid;
     });
     if (!mid) throw new Error('no link up from Пётр Озеров on screen');
     await clickGraphPoint(mid.x, mid.y);

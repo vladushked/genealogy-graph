@@ -637,6 +637,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       const entry = entries[0];
       if (!entry) return;
       this.viewport = { width: entry.contentRect.width, height: entry.contentRect.height };
+      this.markRailScroll();
       if (!this.viewport.width || !this.viewport.height) return;
       const ratio = window.devicePixelRatio || 1;
       this.canvas.width = Math.round(this.viewport.width * ratio); this.canvas.height = Math.round(this.viewport.height * ratio);
@@ -1928,7 +1929,9 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     setOpen(settings.controls.open && !phone, false);
 
     // Problems: a button in the other corner, shown only when there are any; their list opens under it.
-    const corner = this.panel.createDiv({ cls: 'genealogy-corner' });
+    // The top row: problems in the corner, the focus in the middle (on a phone right after them, styles.css).
+    const top = this.panel.createDiv({ cls: 'genealogy-top' });
+    const corner = top.createDiv({ cls: 'genealogy-corner' });
     this.problemsButton = corner.createDiv({ cls: 'clickable-icon genealogy-problems-button', attr: { 'aria-label': words.problemsButton } });
     this.problemsButton.addEventListener('click', () => this.toggleProblems());
     this.problemsEl = this.panel.createDiv({ cls: 'genealogy-problems' });
@@ -1943,8 +1946,9 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     // Left side: node colors, then the generations to highlight.
     const left = this.panel.createDiv({ cls: 'genealogy-left' });
     this.generationRail = left.createDiv({ cls: 'genealogy-generation-rail' });
+    dragScroll(this.generationRail);
     // Top middle: the focus.
-    this.colorBar = this.panel.createDiv({ cls: 'genealogy-mode-bar genealogy-focus-bar' });
+    this.colorBar = top.createDiv({ cls: 'genealogy-mode-bar genealogy-focus-bar' });
 
     // Adding people.
     this.nodePlus = this.panel.createEl('button', { cls: 'genealogy-node-plus', attr: { type: 'button', 'aria-label': words.addRelative } });
@@ -2033,9 +2037,12 @@ class GenealogyGraphView extends ItemView implements HoverParent {
         return;
       }
       const node = this.nodeById.get(id);
-      const name = slot.createEl('button', { cls: 'genealogy-route-name', text: node?.name ?? id, attr: { type: 'button', 'aria-label': words.show(label) } });
+      // A long name with its years scrolls sideways instead of hiding under the cross.
+      const person = slot.createDiv({ cls: 'genealogy-route-person' });
+      dragScroll(person, 'x');
+      const name = person.createEl('button', { cls: 'genealogy-route-name', text: node?.name ?? id, attr: { type: 'button', 'aria-label': words.show(label) } });
       name.addEventListener('click', () => this.centerOn([id]));
-      if (node?.lifeYears) slot.createSpan({ cls: 'genealogy-route-years', text: node.lifeYears });
+      if (node?.lifeYears) person.createSpan({ cls: 'genealogy-route-years', text: node.lifeYears });
       const remove = slot.createEl('button', { cls: 'clickable-icon genealogy-route-remove', attr: { type: 'button', 'aria-label': words.remove } });
       setIcon(remove, 'x');
       remove.addEventListener('click', () => { this.pathEndpoints = this.pathEndpoints.filter((item) => item !== id); this.refresh(); });
@@ -2075,9 +2082,11 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     this.rootIds.forEach((id) => {
       const node = this.nodeById.get(id);
       const slot = slots.createDiv({ cls: 'genealogy-route-slot is-filled' });
-      const name = slot.createEl('button', { cls: 'genealogy-route-name', text: node?.name ?? id, attr: { type: 'button', 'aria-label': words.show } });
+      const person = slot.createDiv({ cls: 'genealogy-route-person' });
+      dragScroll(person, 'x');
+      const name = person.createEl('button', { cls: 'genealogy-route-name', text: node?.name ?? id, attr: { type: 'button', 'aria-label': words.show } });
       name.addEventListener('click', () => this.centerOn([id]));
-      slot.createSpan({ cls: 'genealogy-route-years', text: node?.lifeYears ?? '' });
+      person.createSpan({ cls: 'genealogy-route-years', text: node?.lifeYears ?? '' });
       const remove = slot.createEl('button', { cls: 'clickable-icon genealogy-route-remove', attr: { type: 'button', 'aria-label': words.remove } });
       setIcon(remove, 'x');
       remove.addEventListener('click', () => this.chooseRoot(id));
@@ -2196,6 +2205,13 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       rail.createEl('button', { text: t().graph.rail.all, cls: 'genealogy-generation-reset', attr: { type: 'button', 'aria-label': byRelatives ? t().graph.rail.clear : t().graph.rail.clearGenerations } })
         .addEventListener('click', () => save([]));
     }
+    this.markRailScroll();
+  }
+
+  /** A rail longer than its room scrolls; its ends then fade (styles.css). */
+  private markRailScroll() {
+    const rail = this.generationRail;
+    window.requestAnimationFrame(() => rail.toggleClass('is-scrollable', rail.scrollHeight > rail.clientHeight + 1));
   }
 
   /** Which list colors the people: Проблемы, Уточнить, or none. */
@@ -2554,4 +2570,30 @@ function exampleName(scheme: NameScheme, template: string): string {
     icelandic: { given_name: 'Jón', patronymic: 'Sigurðsson' },
   };
   return cardBase({ ...samples[scheme], birth_date: '1915', death_date: '1980' }, 'deceased', { scheme, template });
+}
+
+/**
+ * A mouse drags a scrolling strip like a finger does (a finger scrolls it natively): the generation rail and a long
+ * name in the route card scroll with a mouse too, as in the mobile layout on a computer. A drag does not click the
+ * button it started on.
+ */
+function dragScroll(el: HTMLElement, axis: 'x' | 'y' = 'y') {
+  el.addEventListener('pointerdown', (down) => {
+    const vertical = axis === 'y';
+    const room = vertical ? el.scrollHeight - el.clientHeight : el.scrollWidth - el.clientWidth;
+    if (down.pointerType !== 'mouse' || down.button !== 0 || room <= 0) return;
+    const start = vertical ? down.clientY : down.clientX, startScroll = vertical ? el.scrollTop : el.scrollLeft;
+    let dragged = false;
+    const move = (event: PointerEvent) => {
+      const shift = (vertical ? event.clientY : event.clientX) - start;
+      if (!dragged && Math.abs(shift) < 4) return;
+      dragged = true;
+      if (vertical) el.scrollTop = startScroll - shift; else el.scrollLeft = startScroll - shift;
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+      if (dragged) el.addEventListener('click', (event) => { event.stopPropagation(); event.preventDefault(); }, { capture: true, once: true });
+    };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  });
 }

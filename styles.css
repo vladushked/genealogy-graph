@@ -26,7 +26,7 @@
 /* The live graph is drawn on this canvas (src/canvas.ts); colors come from the variables of .genealogy-view. */
 .genealogy-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .genealogy-zoom { position: absolute; z-index: 2; right: 10px; bottom: 28px; display: flex; flex-direction: column; gap: 4px; }
-.genealogy-zoom button { width: 28px; height: 28px; padding: 0; font-size: 15px; line-height: 1; }
+.genealogy-view .genealogy-zoom button { width: 28px; height: 28px; padding: 0; font-size: 15px; line-height: 1; }
 /* Export: settings on the left, the sheet (and the whole graph for «Область» and «Склейка») on the right. */
 .modal.genealogy-export-dialog { width: min(1100px, 94vw); max-width: none; }
 .genealogy-export { display: grid; grid-template-columns: minmax(280px, 340px) 1fr; gap: 16px; min-height: min(70vh, 640px); }
@@ -41,7 +41,7 @@
 .genealogy-export-suffix { color: var(--text-muted); }
 .genealogy-export-check { display: flex; align-items: center; gap: 5px; }
 .genealogy-export-segments { display: inline-flex; flex-wrap: wrap; }
-.genealogy-export-dialog .genealogy-mode-button { height: auto; padding: 3px 10px; border-radius: 12px; box-shadow: none; background: transparent; font-size: var(--font-ui-small); color: var(--text-muted); }
+.genealogy-export-dialog button.genealogy-mode-button { height: auto; padding: 3px 10px; border-radius: 12px; box-shadow: none; background: transparent; font-size: var(--font-ui-small); color: var(--text-muted); }
 .genealogy-export-dialog .genealogy-mode-button:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
 .genealogy-export-dialog .genealogy-mode-button.is-active { color: var(--text-on-accent); background: var(--interactive-accent); }
 .genealogy-export-segments .genealogy-mode-button:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -53,7 +53,7 @@
 .genealogy-export-reading.is-small .genealogy-export-reading-pt { color: var(--text-error); }
 .genealogy-export-note.is-warning { color: var(--color-orange); }
 .genealogy-export-note.is-error { color: var(--text-error); }
-.genealogy-view .genealogy-export-inline, .genealogy-export-inline { height: auto; padding: 1px 8px; font-size: var(--font-ui-smaller); }
+.genealogy-export-dialog button.genealogy-export-inline { height: auto; padding: 1px 8px; font-size: var(--font-ui-smaller); }
 .genealogy-export-previews { display: flex; flex-direction: column; gap: 12px; min-width: 0; height: min(72vh, 680px); }
 .genealogy-export-overview { flex: 1 1 0; min-height: 0; display: grid; place-items: center; background: var(--background-secondary); border-radius: 10px; overflow: hidden; }
 .genealogy-export-overview.is-draggable { cursor: move; touch-action: none; }
@@ -86,7 +86,7 @@
   display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 .genealogy-generation-rail { min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .genealogy-generation-rail:empty { display: none; }
-.genealogy-generation-rail button { height: auto; gap: 5px; padding: 2px 8px 2px 6px; border-radius: 12px; font-size: var(--font-ui-smaller); font-variant-numeric: tabular-nums;
+.genealogy-view .genealogy-generation-rail button { height: auto; gap: 5px; padding: 2px 8px 2px 6px; border-radius: 12px; font-size: var(--font-ui-smaller); font-variant-numeric: tabular-nums;
   background: var(--background-primary); color: var(--text-muted); box-shadow: none; border: 1px solid var(--background-modifier-border);
   transition: background-color 0.2s ease-out, color 0.2s ease-out; }
 .genealogy-generation-rail button:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
@@ -97,7 +97,11 @@
 .genealogy-generation-chip.is-active, .genealogy-generation-chip.is-active:hover { background: var(--genealogy-chip); color: #111; }
 .genealogy-generation-reset { margin-top: 4px; }
 /* Problems: a button in the top left corner, their list under it. */
-.genealogy-corner { position: absolute; z-index: 3; top: var(--size-4-3); left: var(--size-4-3); display: flex; gap: 6px; }
+.genealogy-top { position: absolute; z-index: 2; top: var(--size-4-3); left: var(--size-4-3); right: var(--size-4-3); display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; gap: 6px; pointer-events: none; }
+.genealogy-top > * { pointer-events: auto; }
+.genealogy-corner { justify-self: start; display: flex; gap: 6px; }
+.genealogy-corner:empty { display: none; }
 .genealogy-problems-button, .genealogy-clarify-button { gap: 4px; padding: var(--size-2-3);
   background: var(--background-primary); font-size: var(--font-ui-small); color: var(--text-muted); }
 .genealogy-problems-button.is-active, .genealogy-problems-button:hover { color: var(--text-error); }
@@ -130,7 +134,8 @@
 .genealogy-view .genealogy-dock-search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: none; border-radius: 0; background: transparent; box-shadow: none;
   font-size: var(--font-ui-medium); color: var(--text-normal); }
 .genealogy-view .genealogy-dock-search input:focus { box-shadow: none; }
-.genealogy-view .genealogy-dock-button { flex-shrink: 0; width: 40px; padding: 0; color: var(--text-muted); }
+/* Selectors of padded buttons name the element: on a tablet Obsidian pads every button (.is-tablet button:not(.clickable-icon)), and it would win otherwise. */
+.genealogy-view button.genealogy-dock-button { flex-shrink: 0; width: 40px; padding: 0; color: var(--text-muted); }
 .genealogy-view .genealogy-dock-button:hover { color: var(--text-normal); background: color-mix(in srgb, var(--background-modifier-hover) 60%, var(--background-primary)); }
 .genealogy-view .genealogy-dock-button.is-active { color: var(--text-on-accent); background: var(--interactive-accent); border-color: var(--interactive-accent); }
 .genealogy-dock-button svg { width: 18px; height: 18px; }
@@ -146,7 +151,7 @@
 .genealogy-route-status { flex: 1; text-align: right; color: var(--text-muted); }
 .genealogy-route-status.is-found { color: var(--interactive-accent); }
 .genealogy-route-status.is-missing { color: var(--text-error); }
-.genealogy-view .genealogy-route-close, .genealogy-view .genealogy-route-remove { flex-shrink: 0; margin-left: auto; width: 22px; height: 22px; padding: 2px; }
+.genealogy-view button.genealogy-route-close, .genealogy-view button.genealogy-route-remove { flex-shrink: 0; margin-left: auto; width: 22px; height: 22px; padding: 2px; }
 .genealogy-route-fields { display: flex; align-items: center; gap: 8px; }
 /* The rings of the two ends and the dotted line between them. */
 .genealogy-route-rail { flex-shrink: 0; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 13px 0; }
@@ -160,11 +165,13 @@
 .genealogy-route-slot.is-empty { padding: 0; border: none; background: none; }
 .genealogy-view .genealogy-route-input { flex: 1; min-width: 0; width: 100%; height: 100%; }
 .genealogy-route-slot.is-next .genealogy-route-input { border-color: var(--interactive-accent); }
-.genealogy-view .genealogy-route-name { flex: 0 1 auto; min-width: 0; height: auto; padding: 0; border: none; background: none; box-shadow: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.genealogy-view button.genealogy-route-name { flex: none; min-width: 0; height: auto; padding: 0; border: none; background: none; box-shadow: none; white-space: nowrap;
   font-size: var(--font-ui-small); color: var(--text-normal); cursor: pointer; }
 .genealogy-view .genealogy-route-name:hover { color: var(--interactive-accent); background: none; }
-.genealogy-route-years { flex: 1; min-width: 0; white-space: nowrap; color: var(--text-faint); font-size: var(--font-ui-smaller); }
-.genealogy-view .genealogy-route-swap { flex-shrink: 0; width: 28px; height: 28px; padding: 4px; }
+.genealogy-route-person { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; touch-action: pan-x; }
+.genealogy-route-person::-webkit-scrollbar { display: none; }
+.genealogy-route-years { flex: none; white-space: nowrap; color: var(--text-faint); font-size: var(--font-ui-smaller); }
+.genealogy-view button.genealogy-route-swap { flex-shrink: 0; width: 28px; height: 28px; padding: 4px; }
 .genealogy-view .genealogy-route-swap:disabled { opacity: 0.4; cursor: default; }
 /* «Корни»: the threshold of kin around the ancestry, and the oldest ancestors. */
 .genealogy-roots-depth { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--background-modifier-border); }
@@ -177,7 +184,7 @@
 .genealogy-kin-none { color: var(--text-muted); }
 .genealogy-kin-saying { font-style: italic; } /* An easter egg in place of a term: a saying, not a fact. */
 .genealogy-kin-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; padding: 0 var(--size-4-2); font-size: var(--font-ui-smaller); color: var(--text-faint); }
-.genealogy-view .genealogy-kin-step { height: auto; padding: 0 2px; border: none; background: none; box-shadow: none; font-size: var(--font-ui-smaller); color: var(--text-muted); cursor: pointer; }
+.genealogy-view button.genealogy-kin-step { height: auto; padding: 0 2px; border: none; background: none; box-shadow: none; font-size: var(--font-ui-smaller); color: var(--text-muted); cursor: pointer; }
 .genealogy-view .genealogy-kin-step:hover { color: var(--interactive-accent); background: none; }
 /* «Поколение за поколением»: titles at the top, each generation fading in over the one before. */
 .genealogy-credits { position: absolute; z-index: 2; top: calc(var(--size-4-3) + 44px); left: 50%; transform: translateX(-50%); width: min(90%, 520px);
@@ -194,15 +201,15 @@
 .genealogy-controls .mod-animate.is-active, .genealogy-controls .extra-setting-button.is-active { color: var(--interactive-accent); }
 
 /* Adding people: «+» beside the selected person, right of the search, and in the middle of an empty vault. */
-.genealogy-view .genealogy-node-plus { position: absolute; z-index: 2; left: 0; top: 0; width: 24px; height: 24px; padding: 0; border-radius: 50%;
+.genealogy-view button.genealogy-node-plus { position: absolute; z-index: 2; left: 0; top: 0; width: 24px; height: 24px; padding: 0; border-radius: 50%;
   background: var(--interactive-accent); color: var(--text-on-accent); box-shadow: var(--shadow-s); }
 .genealogy-view .genealogy-node-plus:hover { background: var(--interactive-accent-hover); }
 .genealogy-node-plus svg, .genealogy-add-button svg { width: 16px; height: 16px; }
-.genealogy-view .genealogy-add-button { flex-shrink: 0; width: 40px; height: 40px; padding: 0; border-radius: 50%;
+.genealogy-view button.genealogy-add-button { flex-shrink: 0; width: 40px; height: 40px; padding: 0; border-radius: 50%;
   background: var(--interactive-accent); color: var(--text-on-accent); box-shadow: var(--shadow-s); }
 .genealogy-view .genealogy-add-button:hover { background: var(--interactive-accent-hover); }
 .genealogy-empty { position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; pointer-events: none; }
-.genealogy-view .genealogy-empty-add { pointer-events: auto; width: 72px; height: 72px; padding: 0; border-radius: 50%; background: var(--interactive-accent); color: var(--text-on-accent); box-shadow: var(--shadow-s); }
+.genealogy-view button.genealogy-empty-add { pointer-events: auto; width: 72px; height: 72px; padding: 0; border-radius: 50%; background: var(--interactive-accent); color: var(--text-on-accent); box-shadow: var(--shadow-s); }
 .genealogy-view .genealogy-empty-add:hover { background: var(--interactive-accent-hover); }
 .genealogy-empty-add svg { width: 32px; height: 32px; }
 .genealogy-empty-text { color: var(--text-muted); font-size: var(--font-ui-small); }
@@ -239,14 +246,14 @@
 .genealogy-editor-actions .is-disabled { opacity: 0.5; pointer-events: none; }
 .genealogy-editor-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--size-4-3); padding-top: var(--size-4-3);
   border-top: 1px solid var(--background-modifier-border); font-size: var(--font-ui-small); color: var(--text-muted); }
-.genealogy-editor-add button { font-size: var(--font-ui-smaller); padding: 2px 8px; height: auto; }
+.genealogy-editor .genealogy-editor-add button { font-size: var(--font-ui-smaller); padding: 2px 8px; height: auto; }
 .genealogy-editor-idle { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; color: var(--text-muted); font-size: var(--font-ui-small); }
 
 /* The focus as buttons at the top middle. */
-.genealogy-focus-bar { position: absolute; z-index: 2; top: var(--size-4-3); left: 50%; transform: translateX(-50%); }
+.genealogy-focus-bar { grid-column: 2; }
 .genealogy-mode-bar { display: flex; gap: 2px; padding: 2px; border-radius: 14px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); }
 .genealogy-mode-bar.is-disabled { opacity: 0.4; pointer-events: none; }
-.genealogy-view .genealogy-mode-button { height: auto; gap: 5px; padding: 3px 9px 3px 7px; border-radius: 12px; box-shadow: none; background: transparent;
+.genealogy-view button.genealogy-mode-button { height: auto; gap: 5px; padding: 3px 9px 3px 7px; border-radius: 12px; box-shadow: none; background: transparent;
   font-size: var(--font-ui-smaller); color: var(--text-muted); justify-content: flex-start; white-space: nowrap; }
 .genealogy-view .genealogy-mode-button:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
 .genealogy-view .genealogy-mode-button.is-active { color: var(--text-on-accent); background: var(--interactive-accent); }
@@ -267,7 +274,7 @@
 .genealogy-profile-info { min-width: 0; }
 .genealogy-profile-bar { position: absolute; z-index: 1; top: 16px; right: 22px; display: flex; align-items: center; gap: 4px; padding: 2px; border-radius: 10px;
   background: color-mix(in srgb, var(--background-primary) 85%, transparent); }
-.genealogy-view .genealogy-profile-action, .genealogy-profile .genealogy-profile-action { width: 32px; height: 32px; padding: 6px; }
+.genealogy-view button.genealogy-profile-action, .genealogy-profile button.genealogy-profile-action { width: 32px; height: 32px; padding: 6px; }
 .genealogy-profile-name { margin: 0; padding-right: 170px; font-size: 28px; line-height: 1.2; } /* Clear of the corner buttons. */
 .genealogy-profile-born { margin-top: 4px; color: var(--text-muted); }
 .genealogy-profile-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -283,7 +290,7 @@
 .genealogy-profile-label { color: var(--text-muted); }
 .genealogy-profile-value { min-width: 0; overflow-wrap: anywhere; }
 .genealogy-profile-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
-.genealogy-profile .genealogy-profile-chip { display: inline-flex; align-items: center; gap: 8px; height: auto; max-width: 100%; padding: 3px 12px 3px 3px; border: none; border-radius: 999px;
+.genealogy-profile .genealogy-profile-chip, .genealogy-profile button.genealogy-profile-chip { display: inline-flex; align-items: center; gap: 8px; height: auto; max-width: 100%; padding: 3px 12px 3px 3px; border: none; border-radius: 999px;
   background: var(--background-secondary); box-shadow: none; color: var(--text-normal); font-size: var(--font-ui-small); text-align: left; }
 .genealogy-profile button.genealogy-profile-chip { cursor: pointer; }
 .genealogy-profile button.genealogy-profile-chip:hover { background: color-mix(in srgb, var(--interactive-accent) 16%, var(--background-secondary)); }
@@ -317,8 +324,40 @@
 .is-phone .genealogy-status { display: none; }
 .is-phone .genealogy-dock { left: 12px; right: 12px; width: auto; min-width: 0; transform: none; bottom: calc(var(--view-bottom-spacing, 0px) + 10px); }
 .is-phone .genealogy-zoom { right: 12px; bottom: calc(var(--view-bottom-spacing, 0px) + 60px); }
-.is-phone .genealogy-left { max-height: calc(100% - var(--view-bottom-spacing, 0px) - 160px); }
-/* The focus buttons: only the chosen one keeps its name. */
-.is-phone .genealogy-mode-button:not(.is-active) .genealogy-mode-label { display: none; }
+/* The generations stay between the top row of buttons (64 px) and the dock with «⤢» above it, centered in that room. */
+.is-phone .genealogy-left { top: 64px; bottom: calc(var(--view-bottom-spacing, 0px) + 62px); height: fit-content; margin-block: auto; transform: none;
+  max-height: calc(100% - 64px - var(--view-bottom-spacing, 0px) - 62px); }
+/* The top row in one line, left of the gear: the corner buttons, then the focus as icons only (named in their tooltips). */
+.is-phone .genealogy-top { right: 64px; grid-template-columns: auto auto 1fr; }
+.is-phone .genealogy-focus-bar .genealogy-mode-label { display: none; }
 .is-phone .genealogy-controls:not(.is-close) { z-index: 4; left: 8px; right: 8px; width: auto; max-height: calc(100% - var(--view-bottom-spacing, 0px) - 70px); }
-.is-phone .genealogy-problems { left: 8px; right: 8px; width: auto; max-height: calc(100% - var(--view-bottom-spacing, 0px) - 110px); }
+.is-phone .genealogy-problems { top: 60px; left: 8px; right: 8px; width: auto; max-height: calc(100% - var(--view-bottom-spacing, 0px) - 110px); }
+/*
+ * Phone controls in the style of the dock: frosted, 40 px, finger-sized. The generations are one pill of round buttons
+ * that scrolls when there are many; the gear, ▶ and «wind» are separate round buttons; the focus is a segmented control.
+ */
+.is-phone .genealogy-left:has(.genealogy-generation-rail:not(:empty)),
+.is-phone .genealogy-controls.is-close .graph-controls-button,
+.is-phone .genealogy-mode-bar,
+.is-phone .genealogy-view .genealogy-corner .clickable-icon,
+.is-phone .genealogy-view .genealogy-zoom button {
+  border: 1px solid var(--background-modifier-border); color: var(--text-muted);
+  background: color-mix(in srgb, var(--background-primary) 72%, transparent); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22); }
+.is-phone .genealogy-left { padding: 4px; border-radius: 24px; gap: 2px; }
+.is-phone .genealogy-generation-rail { gap: 2px; align-items: stretch; scroll-snap-type: y proximity; overscroll-behavior: contain; touch-action: pan-y; }
+.is-phone .genealogy-generation-rail.is-scrollable { mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 14px), transparent);
+  -webkit-mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 14px), transparent); }
+.is-phone .genealogy-generation-rail button { position: relative; flex: none; width: 48px; height: 40px; padding: 0; gap: 4px; justify-content: center;
+  border: none; border-radius: 20px; background: transparent; font-size: var(--font-ui-small); scroll-snap-align: center; }
+.is-phone .genealogy-generation-reset { margin-top: 0; }
+/* «Я» at the corner of the 0 button: there is no room for it beside the number. */
+.is-phone .genealogy-me-badge { position: absolute; top: 1px; right: 0; padding: 0 4px; font-size: 9px; line-height: 13px; }
+.is-phone .genealogy-controls.is-close { display: flex; flex-direction: column; gap: 8px; padding: 0; border: none; background: transparent; overflow: visible; }
+.is-phone .genealogy-controls.is-close .graph-controls-button { width: 40px; height: 40px; margin: 0; padding: 0; border-radius: 20px; align-items: center; justify-content: center; }
+.is-phone .genealogy-controls.is-close .graph-controls-button.is-active { color: var(--text-on-accent); background: var(--interactive-accent); border-color: var(--interactive-accent); }
+.is-phone .genealogy-view .genealogy-zoom button { color: var(--text-muted); }
+.is-phone .genealogy-view .genealogy-corner .clickable-icon { height: 40px; min-width: 40px; padding: 0 12px; border-radius: 20px; justify-content: center; font-size: var(--font-ui-small); }
+.is-phone .genealogy-mode-bar { height: 40px; padding: 3px; border-radius: 20px; gap: 2px; }
+.is-phone .genealogy-view button.genealogy-mode-button { height: 100%; min-width: 32px; padding: 0 10px; border-radius: 17px; justify-content: center; font-size: var(--font-ui-small); }
+.is-phone .genealogy-mode-icon svg { width: 16px; height: 16px; }

@@ -32,7 +32,7 @@ jobs:
             styles.css
 
   e2e:
-    name: UI tests, Obsidian ${{ matrix.obsidian }}
+    name: UI tests, Obsidian ${{ matrix.obsidian }}, ${{ matrix.layout }}
     needs: unit
     runs-on: ubuntu-latest
     strategy:
@@ -40,6 +40,11 @@ jobs:
       matrix:
         # The plugin's minAppVersion with the oldest installer it can run on, and the latest release.
         obsidian: ['1.8.7/earliest', 'latest/latest']
+        layout: [desktop]
+        # The phone and tablet layouts: Obsidian's own mobile mode in a window of that size (test/e2e/helpers.ts).
+        include:
+          - { obsidian: 'latest/latest', layout: phone }
+          - { obsidian: 'latest/latest', layout: tablet }
     steps:
       - uses: actions/checkout@v7
         with:
@@ -60,6 +65,7 @@ jobs:
         run: xvfb-run -a npm run test:e2e
         env:
           OBSIDIAN_VERSIONS: ${{ matrix.obsidian }}
+          LAYOUT: ${{ matrix.layout }}
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
