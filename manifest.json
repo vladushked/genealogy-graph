@@ -6,5 +6,5 @@
   "description": "Interactive genealogy graph from person note properties, with image and print export.",
   "author": "Vladislav Plotnikov",
   "authorUrl": "https://vladushked.github.io",
-  "isDesktopOnly": true
+  "isDesktopOnly": false
 }

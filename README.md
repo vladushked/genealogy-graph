@@ -14,9 +14,10 @@ An interactive family tree for Obsidian, drawn from your notes: one note per per
 - **Import.** GEDCOM 5.5, 5.5.1 and 7.0, and «Древо Жизни» archives, with photos; re-importing a file updates the cards instead of duplicating them.
 - **Export for print.** SVG, PNG or vector PDF, from A4 to A0 and plotter rolls, tiled sheets with glue marks; the dialog checks that names stay readable.
 - **Checks.** Broken links, impossible generations and what each card still lacks.
-- **Any naming tradition.** Russian, Western, Spanish, East Asian and Icelandic name schemes; the interface is in English or Russian.
+- **Phones and tablets.** Pinch to zoom, hold a finger on a person for their menu, double-tap for the profile; on a phone the controls are finger-sized and sit above Obsidian's navigation bar.
+- **Any naming tradition. Russian, Western, Spanish, East Asian and Icelandic name schemes; the interface is in English or Russian.
 
-Your data stays plain Markdown: properties follow GEDCOM, so the vault stays readable without the plugin. Desktop only.
+Your data stays plain Markdown: properties follow GEDCOM, so the vault stays readable without the plugin. Works on desktop, phones and tablets.
 
 ## Getting started
 
@@ -35,8 +36,8 @@ In Obsidian open **Settings → Community plugins → Browse**, find **Genealogy
 The plugin works offline: it makes no network requests and collects nothing.
 
 - **Vault access.** To find person notes it reads the properties of every Markdown file in the vault (Obsidian's metadata cache) and ignores notes without `type: person`. It writes notes only when you add or edit people, run an import, or (with **Rename by the template**) when a card's name or dates change and its file is renamed to match.
-- **Files outside the vault.** Only during an import: the plugin reads the GEDCOM or «Древо Жизни» file you pick, and the photos and documents it refers to on your disk (through Node's `fs`, desktop only), and copies them into the vault (**Папка файлов**). Nothing outside the vault is ever written.
-- **Export** saves a file where you choose.
+- **Files outside the vault.** Only during an import: the plugin reads the GEDCOM or «Древо Жизни» file you pick, and the photos and documents it refers to on your disk (through Node's `fs`, desktop only; on a phone or tablet you pick the photo files yourself), and copies them into the vault (**Папка файлов**). Nothing outside the vault is ever written.
+- **Export** saves a file where you choose; on a phone or tablet it is saved into the vault.
 
 ## Development
 

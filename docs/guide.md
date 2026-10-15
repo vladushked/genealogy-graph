@@ -2,7 +2,7 @@
 
 Everything the plugin does, in detail. For a short overview see the [README](../README.md).
 
-Interactive genealogy graph built from person notes. The graph opens as a compact group, spreads out with strong repulsion for half a second, then settles, coming to rest after about 2 seconds; after dragging a person it calms down in under 2 seconds. Forces and damping stay consistent while the simulation cools, so movement fades without an abrupt stop after opening. Every relationship comes from note properties. The plugin writes notes only when you add or edit people (see **Adding and editing people**) or run an import; with the setting **Rename by the template** (**Переименовывать по шаблону**) it also renames cards whose name or dates change. It is desktop-only.
+Interactive genealogy graph built from person notes. The graph opens as a compact group, spreads out with strong repulsion for half a second, then settles, coming to rest after about 2 seconds; after dragging a person it calms down in under 2 seconds. Forces and damping stay consistent while the simulation cools, so movement fades without an abrupt stop after opening. Every relationship comes from note properties. The plugin writes notes only when you add or edit people (see **Adding and editing people**) or run an import; with the setting **Rename by the template** (**Переименовывать по шаблону**) it also renames cards whose name or dates change. It works on desktop, phones and tablets (see **Phones and tablets**).
 
 The interface is in English or Russian (setting **Language**: as in Obsidian by default; a vault that used the plugin before the translation keeps Russian). Names follow a **name scheme** — Russian, Western, Spanish, East Asian or Icelandic — and the file names of new cards a template, so the plugin works for families outside Russia too. Below, the controls are named in Russian as they were first written; the English interface uses the same layout.
 
@@ -120,6 +120,13 @@ Re-importing the same file finds its cards through `source_record` and creates n
 - **Filters.**
   - **Глубина** limits the view to 1–4 relationship steps from the selected people, or to the selected people only; it is inactive while nobody is selected.
   - **Скрыть несоединённых** hides people without links, or, with a selection, people unrelated to it.
+
+## Phones and tablets
+
+- **Gestures.** One finger pans the graph or drags a person; two fingers pinch to zoom around their middle. A tap selects, a double tap opens the profile, a finger held on a person for half a second opens their menu (the right-click menu: profile, note, adding relatives, selecting).
+- **Phone layout.** The controls are finger-sized (40 px) and sit above Obsidian's navigation bar: the dock across the bottom, «⤢» above it (the zoom buttons give way to the pinch), the generations as one pill that scrolls when there are many, the focus as icons only. The side panel starts folded and opens across the whole width; the status line is hidden.
+- **Export** is saved into the vault (to the attachments folder) and opens there, since a download does nothing in the mobile app.
+- **Import** reads GEDCOM and «Древо Жизни» as on a computer; a phone cannot read a folder next to the file, so the photos are picked as files and matched by name.
 
 ## View modes
 
