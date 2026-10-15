@@ -62,3 +62,7 @@ Each test names its scenario id in its title.
 | EXPORT-01…02 | Print PDF with a notice of letters no font has; screen SVG | scenarios | UI |
 | I18N-01…04 | Switching the language redraws the graph, tab and controls with no Russian left; the settings tab; an English vault from the start | scenarios, international | UI |
 | SCALE-01…03 | A thousand people build without problems, open and settle, survive dragging | scale-500, scale-1000 | vault, UI |
+
+## README media
+
+`npm run media` records `docs/media/demo.gif` and the directory screenshots in `docs/media/screenshots/` (1200×800) from the fictional `showcase` vault: the same wdio-obsidian-service setup as the UI tests (`wdio.media.conf.mts`, `docs/media/record.media.ts`), frames from Electron's `capturePage`, then `docs/media/assemble.mjs` builds the GIF with ffmpeg. An Obsidian window opens on the desktop while it records.
