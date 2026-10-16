@@ -336,9 +336,21 @@
 .is-phone .genealogy-status { display: none; }
 .is-phone .genealogy-dock { left: 12px; right: 12px; width: auto; min-width: 0; transform: none; bottom: calc(var(--genealogy-bottom-bar) + 10px); }
 .is-phone .genealogy-zoom { right: 12px; bottom: calc(var(--genealogy-bottom-bar) + 60px); }
-/* The generations stay between the top row of buttons (64 px) and the dock with «⤢» above it, centered in that room. */
-.is-phone .genealogy-left { top: 64px; bottom: calc(var(--genealogy-bottom-bar) + 62px); height: fit-content; margin-block: auto; transform: none;
-  max-height: calc(100% - 64px - var(--genealogy-bottom-bar) - 62px); }
+/* The generations stay between the top row of buttons (64 px) and their button above the dock, centered in that room. */
+.is-phone .genealogy-left { top: 64px; bottom: calc(var(--genealogy-bottom-bar) + 110px); height: fit-content; margin-block: auto; transform: none;
+  max-height: calc(100% - 64px - var(--genealogy-bottom-bar) - 110px); }
+/*
+ * On a phone the rail is folded into a button over «Я», level with «⤢»: a dot per generation (or number of relatives),
+ * the highlighted ones larger. It opens the rail; pressing it again or moving the graph folds the rail away, so the
+ * rail never hides people and «⤢» fits the graph to the whole screen.
+ */
+.genealogy-rail-toggle { display: none; }
+.is-phone .genealogy-panel:not(.is-rail-open) .genealogy-left { display: none; }
+.is-phone .genealogy-view button.genealogy-rail-toggle { position: absolute; z-index: 2; left: 12px; bottom: calc(var(--genealogy-bottom-bar) + 60px);
+  display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border-radius: 20px; }
+.is-phone .genealogy-view button.genealogy-rail-toggle.is-active { border-color: var(--interactive-accent); }
+.genealogy-rail-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--genealogy-chip); transition: transform 0.15s ease-out; }
+.genealogy-rail-dot.is-active { transform: scale(1.6); }
 /* The top row in one line, left of the gear: the corner buttons, then the focus as icons only (named in their tooltips). */
 .is-phone .genealogy-top { right: 64px; grid-template-columns: auto auto 1fr; }
 .is-phone .genealogy-focus-bar .genealogy-mode-label { display: none; }
@@ -349,6 +361,7 @@
  * that scrolls when there are many; the gear, ▶ and «wind» are separate round buttons; the focus is a segmented control.
  */
 .is-phone .genealogy-left:has(.genealogy-generation-rail:not(:empty)),
+.is-phone .genealogy-view button.genealogy-rail-toggle,
 .is-phone .genealogy-controls.is-close .graph-controls-button,
 .is-phone .genealogy-mode-bar,
 .is-phone .genealogy-view .genealogy-corner .clickable-icon,

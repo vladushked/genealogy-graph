@@ -75,6 +75,7 @@ The UI tests also run in Obsidian's own mobile mode (`app.emulateMobile`): `npm 
 | LAYOUT-02 | The controls over the graph do not cover each other or leave it; Obsidian's navigation bar covers none of them | scenarios | UI |
 | LAYOUT-03 | Every highlighted generation keeps its color, not only the last one pressed | scenarios | UI |
 | LAYOUT-04 | Phone: with the keyboard up (`--keyboard-height`) the dock stays clear above it and the person search lists its people above the field | scenarios | UI |
+| LAYOUT-05 | Phone: the generation rail is folded into a button of dots (the highlighted ones larger), opens on it and folds away when the graph is dragged | scenarios | UI |
 
 ## Phone screenshots
 

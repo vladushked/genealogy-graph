@@ -523,6 +523,8 @@ class GenealogyGraphView extends ItemView implements HoverParent {
   private problemsEl!: HTMLElement;
   private problemsButton!: HTMLElement;
   private generationRail!: HTMLElement;
+  /** On a phone the rail is folded into this button of colored dots, one per chip (styles.css). */
+  private railToggle!: HTMLElement;
   /** Relative count groups of the visible people and the largest count, for the «Число родственников» focus. */
   private relativeGroups: Array<{ from: number; to: number | null }> = [];
   private maxLinks = 0;
@@ -1565,6 +1567,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       // A finger trembles more than a mouse: it needs a longer way to count as a drag.
       if (!pointer.moved && Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) > (event.pointerType === 'mouse' ? 3 : 8)) {
         pointer.moved = true;
+        this.showRail(false); // Moving the graph folds the rail away on a phone.
         this.cancelLongPress();
         if (pointer.kind !== 'press') this.stopFollowing(); // The camera stays put while the pointer drags.
         // A drag wakes the layout only once the pointer really moves: a plain click leaves the graph still.
@@ -1680,7 +1683,15 @@ class GenealogyGraphView extends ItemView implements HoverParent {
   }
 
   /** A second finger turns the gesture into a pinch: whatever the first finger was doing stops. */
+  /** Opens or folds the rail on a phone; elsewhere it is always shown and this only marks the state. */
+  private showRail(open: boolean) {
+    this.panel.toggleClass('is-rail-open', open);
+    this.railToggle?.toggleClass('is-active', open);
+    if (open) this.markRailScroll();
+  }
+
   private startPinch() {
+    this.showRail(false);
     this.cancelLongPress();
     const pointer = this.pointer;
     this.pointer = null; this.lastClick = null;
@@ -1945,6 +1956,8 @@ class GenealogyGraphView extends ItemView implements HoverParent {
 
     // Left side: node colors, then the generations to highlight.
     const left = this.panel.createDiv({ cls: 'genealogy-left' });
+    this.railToggle = this.panel.createEl('button', { cls: 'genealogy-rail-toggle', attr: { type: 'button', 'aria-label': words.rail.toggle } });
+    this.railToggle.addEventListener('click', () => this.showRail(!this.panel.hasClass('is-rail-open')));
     this.generationRail = left.createDiv({ cls: 'genealogy-generation-rail' });
     dragScroll(this.generationRail);
     // Top middle: the focus.
@@ -2179,6 +2192,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
   /** The highlight column: one button per generation (oldest at the top, «Я» on yours), or per relative count. */
   private updateGenerationRail() {
     const rail = this.generationRail; rail.empty();
+    this.railToggle.empty();
     const settings = this.plugin.settings;
     const byRelatives = settings.focus === 'relatives';
     // Each button highlights its people; several can be on at once.
@@ -2189,7 +2203,8 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       }))
       : [...new Set(this.nodes.map((node) => node.generation).filter((value): value is number => value !== null && Number.isInteger(value)))].sort((a, b) => a - b)
         .map((generation) => ({ key: generation, text: generationLabel(generation), color: generationColor(generation, this.plugin.generationRange), zero: generation === 0, label: t().graph.rail.generation(generationLabel(generation)) }));
-    if (chips.length < 2) return;
+    this.railToggle.toggle(chips.length >= 2);
+    if (chips.length < 2) { this.showRail(false); return; }
     const list = byRelatives ? settings.highlightRelatives : settings.highlightGenerations;
     const highlighted = new Set(list);
     const save = (next: number[]) => this.changeView((data) => { if (byRelatives) data.highlightRelatives = next; else data.highlightGenerations = next; });
@@ -2197,6 +2212,9 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       const button = rail.createEl('button', { text: chip.text, cls: 'genealogy-generation-chip', attr: { type: 'button', 'aria-label': chip.label } });
       button.style.setProperty('--genealogy-chip', chip.color);
       button.toggleClass('is-active', highlighted.has(chip.key));
+      const dot = this.railToggle.createSpan({ cls: 'genealogy-rail-dot' });
+      dot.style.setProperty('--genealogy-chip', chip.color);
+      dot.toggleClass('is-active', highlighted.has(chip.key));
       // Generations count from «me»: the 0 button says so once you are chosen.
       if (chip.zero && this.nodeById.has(settings.selfPersonId)) button.createSpan({ cls: 'genealogy-me-badge', text: t().graph.me, attr: { 'aria-label': t().graph.rail.yours } });
       button.addEventListener('click', () => {

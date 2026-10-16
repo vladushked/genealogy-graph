@@ -1,5 +1,5 @@
 import { browser, expect } from '@wdio/globals';
-import { closeControls, openVault, state } from './helpers';
+import { closeControls, openVault, state, openRail } from './helpers';
 
 describe('[FOCUS] focus, highlight, generation by generation', () => {
   before(() => openVault('scenarios'));
@@ -14,6 +14,7 @@ describe('[FOCUS] focus, highlight, generation by generation', () => {
   });
 
   it('[FOCUS-02] a generation chip highlights its people; «все» clears', async () => {
+    await openRail();
     await browser.$('.genealogy-generation-rail').$('button=0').click();
     expect((await state()).settings.highlightGenerations).toEqual([0]);
     expect((await state()).status).toContain('0: '); // The status line is hidden on a phone.
@@ -23,6 +24,7 @@ describe('[FOCUS] focus, highlight, generation by generation', () => {
 
   it('[FOCUS-02b] every generation chip on is the same as «все»: nothing is highlighted', async () => {
     // The rail is drawn anew after each press: each chip is looked up again.
+    await openRail();
     const count = await browser.$$('.genealogy-generation-chip').length;
     for (let i = 0; i < count; i++) await browser.$$('.genealogy-generation-chip')[i].click();
     expect((await state()).settings.highlightGenerations).toEqual([]);

@@ -133,6 +133,7 @@ const en = {
     rail: {
       relatives: (from: number, open: boolean) => `Highlight people with ${open ? `${from} or more relatives` : `${from} ${enPlural(from, 'relative', 'relatives')}`}`,
       generation: (label: string) => `Highlight generation ${label}`, yours: 'Your generation', all: 'all', clear: 'Clear highlight', clearGenerations: 'Clear generation highlight',
+      toggle: 'Highlight: generations or numbers of relatives',
     },
     problemsTitle: (count: number) => `Problems in cards: ${count}`, show: 'Show on graph', openNote: 'Open note',
     clarifyLabel: (people: number, items: number) => `What to clarify: ${people} ${enPlural(people, 'person', 'people')}, ${items} ${enPlural(items, 'item', 'items')}`,
@@ -383,6 +384,7 @@ const ru: Strings = {
     },
     rail: {
       relatives: (from, open) => `Подсветить людей, у кого ${open ? `${from} и больше родственников` : `${from} ${ruPlural(from, 'родственник', 'родственника', 'родственников')}`}`,
+      toggle: 'Подсветка: поколения или число родственников',
       generation: (label) => `Подсветить поколение ${label}`, yours: 'Ваше поколение', all: 'все', clear: 'Снять подсветку', clearGenerations: 'Снять подсветку поколений',
     },
     problemsTitle: (count) => `Проблемы в карточках: ${count}`, show: 'Показать на графе', openNote: 'Открыть заметку',

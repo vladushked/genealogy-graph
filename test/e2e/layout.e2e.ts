@@ -1,5 +1,5 @@
 import { browser, expect } from '@wdio/globals';
-import { closeControls, LAYOUT, openVault } from './helpers';
+import { clearGraph, closeControls, LAYOUT, openRail, openVault } from './helpers';
 
 /** The controls over the graph fit the screen in every layout (LAYOUT=phone|tablet for the mobile ones). */
 describe(`[LAYOUT] controls over the graph, ${LAYOUT}`, () => {
@@ -23,7 +23,7 @@ describe(`[LAYOUT] controls over the graph, ${LAYOUT}`, () => {
     const overlaps = await browser.execute(() => {
       const visible = (el: Element | null) => el && el.getClientRects().length > 0 && el.getBoundingClientRect().width > 0;
       const parts: Array<[string, Element]> = [];
-      for (const [name, selector] of [['corner', '.genealogy-corner > *'], ['focus', '.genealogy-focus-bar'], ['generations', '.genealogy-left'], ['dock', '.genealogy-dock'],
+      for (const [name, selector] of [['corner', '.genealogy-corner > *'], ['focus', '.genealogy-focus-bar'], ['generations', '.genealogy-left'], ['dock', '.genealogy-dock'], ['highlight', '.genealogy-rail-toggle'],
         ['zoom', '.genealogy-zoom'], ['panel', '.genealogy-controls'], ['navigation', '.mobile-navbar']] as const) {
         document.querySelectorAll(selector).forEach((el, i) => { if (visible(el)) parts.push([`${name}${i}`, el]); });
       }
@@ -44,6 +44,7 @@ describe(`[LAYOUT] controls over the graph, ${LAYOUT}`, () => {
   });
 
   it('[LAYOUT-03] every highlighted generation keeps its color, not only the last one pressed', async () => {
+    await openRail();
     const rail = browser.$('.genealogy-generation-rail');
     for (const label of ['−2', '−1', '+1']) await rail.$(`button*=${label}`).click();
     const chips = await browser.execute(() => [...document.querySelectorAll<HTMLElement>('.genealogy-generation-chip.is-active')].map((chip) => {
@@ -77,5 +78,33 @@ describe(`[LAYOUT] controls over the graph, ${LAYOUT}`, () => {
     expect(geometry.list).not.toBeNull();
     expect(geometry.list!.bottom).toBeLessThanOrEqual(geometry.field.top); // not over the field, not under the keyboard
     expect(geometry.list!.top).toBeGreaterThanOrEqual(0);
+  });
+
+  it('[LAYOUT-05] phone: the rail folds into a button of dots, opens on it, and folds away when the graph moves', async function () {
+    if (LAYOUT !== 'phone') this.skip();
+    const toggle = browser.$('.genealogy-rail-toggle');
+    await expect(toggle).toBeDisplayed();
+    // LAYOUT-03 left the rail open: the button folds it.
+    if ((await toggle.getAttribute('class')).includes('is-active')) await toggle.click();
+    await expect(browser.$('.genealogy-left')).not.toBeDisplayed();
+    const chips = await browser.$$('.genealogy-generation-chip').length;
+    expect(await toggle.$$('.genealogy-rail-dot').length).toBe(chips);
+    await toggle.click();
+    await expect(browser.$('.genealogy-left')).toBeDisplayed();
+    await browser.$('.genealogy-generation-rail').$('button*=0').click();
+    // The chosen generation's dot grows; the rail stays open for more.
+    await expect(toggle.$$('.genealogy-rail-dot.is-active')).toBeElementsArrayOfSize(1);
+    await expect(browser.$('.genealogy-left')).toBeDisplayed();
+    // Dragging the graph folds it away.
+    await clearGraph();
+    const panel = await browser.$('.genealogy-panel').getLocation();
+    const size = await browser.$('.genealogy-panel').getSize();
+    const x = Math.round(panel.x + size.width * 0.6), y = Math.round(panel.y + size.height * 0.45);
+    await browser.action('pointer').move({ x, y, origin: 'viewport' }).down().move({ x: x + 60, y: y + 40, origin: 'viewport', duration: 200 }).up().perform();
+    await expect(browser.$('.genealogy-left')).not.toBeDisplayed();
+    await toggle.click();
+    await browser.$('.genealogy-generation-reset').click();
+    await toggle.click();
+    await expect(browser.$('.genealogy-left')).not.toBeDisplayed();
   });
 });

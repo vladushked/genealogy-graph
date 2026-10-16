@@ -39,6 +39,11 @@ describe('[PHONE] the graph on a phone', () => {
   it('screens', async () => {
     await waitSettled();
     await shot('1-graph');
+    await tap('.genealogy-rail-toggle');
+    await browser.execute(() => [...document.querySelectorAll<HTMLElement>('.genealogy-generation-chip')].find((chip) => chip.textContent?.startsWith('−1'))?.click());
+    await shot('1b-generations');
+    await tap('.genealogy-rail-toggle');
+    await shot('1c-folded');
     await tap('.genealogy-controls .mod-open');
     await shot('2-controls');
     await tap('.genealogy-controls .mod-close');

@@ -144,6 +144,15 @@ export async function showEditor() {
   await browser.pause(300);
 }
 
+/** The generation rail in sight: on a phone it is folded into a button over «Я». */
+export async function openRail() {
+  await browser.execute(() => {
+    const toggle = document.querySelector<HTMLElement>('.genealogy-rail-toggle');
+    if (toggle && toggle.getClientRects().length && !toggle.hasClass('is-active')) toggle.click();
+  });
+  await browser.pause(200);
+}
+
 /** The side panel of the graph, folded: on a phone it is folded already at start. */
 export async function closeControls() {
   await browser.execute(() => (document.querySelector('.genealogy-controls:not(.is-close) .mod-close') as HTMLElement | null)?.click());
