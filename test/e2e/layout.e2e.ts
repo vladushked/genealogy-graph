@@ -55,4 +55,27 @@ describe(`[LAYOUT] controls over the graph, ${LAYOUT}`, () => {
     for (const chip of chips) expect(chip.background).toBe(chip.want);
     await rail.$('.genealogy-generation-reset').click();
   });
+
+  it('[LAYOUT-04] with the keyboard up the search stays above it, and its list opens above the field', async function () {
+    if (LAYOUT !== 'phone') this.skip(); // Only Obsidian's phone layout shrinks for the keyboard and floats the dock.
+    // Obsidian sets --keyboard-height while the on-screen keyboard is up, and the app shrinks above it.
+    await browser.execute(() => document.documentElement.style.setProperty('--keyboard-height', '320px'));
+    await browser.pause(300);
+    const input = browser.$('.genealogy-dock-search input');
+    await input.click();
+    await browser.keys('Озер');
+    await browser.pause(500);
+    const geometry = await browser.execute(() => {
+      const rect = (selector: string) => { const r = document.querySelector(selector)!.getBoundingClientRect(); return { top: r.top, bottom: r.bottom }; };
+      const lists = [...document.querySelectorAll('.suggestion-container')].filter((el) => el.getClientRects().length > 0).map((el) => el.getBoundingClientRect());
+      return { keyboardTop: window.innerHeight - 320, dock: rect('.genealogy-dock'), field: rect('.genealogy-dock-search input'), list: lists[0] ? { top: lists[0].top, bottom: lists[0].bottom } : null };
+    });
+    await browser.keys('Escape');
+    await browser.execute(() => document.documentElement.style.removeProperty('--keyboard-height'));
+    expect(geometry.dock.bottom).toBeLessThanOrEqual(geometry.keyboardTop - 4); // clear of the keyboard, not touching it
+    expect(geometry.dock.top).toBeGreaterThan(geometry.keyboardTop - 120); // right above the keyboard, not floating high
+    expect(geometry.list).not.toBeNull();
+    expect(geometry.list!.bottom).toBeLessThanOrEqual(geometry.field.top); // not over the field, not under the keyboard
+    expect(geometry.list!.top).toBeGreaterThanOrEqual(0);
+  });
 });

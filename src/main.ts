@@ -2430,12 +2430,33 @@ class GenealogyGraphView extends ItemView implements HoverParent {
 
 /** Search suggestions: everyone whose name contains the typed text, names starting with it first; the list scrolls. */
 class PersonSuggest extends AbstractInputSuggest<ForceNode> {
-  constructor(app: App, input: HTMLInputElement, private people: () => ForceNode[], private choose: (node: ForceNode) => void) {
-    super(app, input);
+  constructor(app: App, private field: HTMLInputElement, private people: () => ForceNode[], private choose: (node: ForceNode) => void) {
+    super(app, field);
     this.limit = Number.MAX_SAFE_INTEGER; // Obsidian keeps the first 100 otherwise.
   }
 
+  open() {
+    super.open();
+    this.placeAbove();
+  }
+
+  /**
+   * On a phone the list opens above the field, right against it, as tall as the room up there. The field sits at the
+   * bottom, over the keyboard, and Obsidian places the list by the whole screen: with the keyboard up it could
+   * cover the field, or hide under the keyboard.
+   */
+  private placeAbove() {
+    const list = (this as unknown as { suggestEl?: HTMLElement }).suggestEl;
+    if (!list || !document.body.hasClass('is-phone')) return;
+    const field = this.field.getBoundingClientRect();
+    list.addClass('genealogy-suggest-above');
+    list.style.setProperty('--genealogy-suggest-bottom', `${Math.round(window.innerHeight - field.top + 6)}px`);
+    list.style.setProperty('--genealogy-suggest-height', `${Math.max(120, Math.round(field.top - 70))}px`);
+  }
+
   getSuggestions(query: string): ForceNode[] {
+    // The field moves while the keyboard slides in: the list follows it on every keystroke.
+    window.requestAnimationFrame(() => this.placeAbove());
     const normalize = (value: string) => value.toLocaleLowerCase().replace(/ё/g, 'е');
     const text = normalize(query.trim());
     const found = this.people().filter((node) => normalize(node.name).includes(text));
