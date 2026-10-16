@@ -2199,7 +2199,11 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       button.toggleClass('is-active', highlighted.has(chip.key));
       // Generations count from «me»: the 0 button says so once you are chosen.
       if (chip.zero && this.nodeById.has(settings.selfPersonId)) button.createSpan({ cls: 'genealogy-me-badge', text: t().graph.me, attr: { 'aria-label': t().graph.rail.yours } });
-      button.addEventListener('click', () => save(highlighted.has(chip.key) ? list.filter((value) => value !== chip.key) : [...list, chip.key].sort((a, b) => a - b)));
+      button.addEventListener('click', () => {
+        const next = highlighted.has(chip.key) ? list.filter((value) => value !== chip.key) : [...list, chip.key].sort((a, b) => a - b);
+        // Every button on is the same as none: nothing stands out, as after «все».
+        save(chips.every((other) => next.includes(other.key)) ? [] : next);
+      });
     }
     if (highlighted.size) {
       rail.createEl('button', { text: t().graph.rail.all, cls: 'genealogy-generation-reset', attr: { type: 'button', 'aria-label': byRelatives ? t().graph.rail.clear : t().graph.rail.clearGenerations } })

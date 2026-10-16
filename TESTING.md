@@ -55,7 +55,7 @@ Each test names its scenario id in its title.
 | ROUTE-02…04 | Route mode by clicks, the term in the card, «not related», ⇅, Esc | scenarios | UI |
 | ROOTS-01…03 | Ancestors up to the oldest; the «Корни» card; kin around grows with the threshold | scenarios | vault, UI |
 | FILTERS-01…03 | Hide unconnected; depth; hiding a branch through a link and showing it again | scenarios | UI |
-| FOCUS-01…04 | Focus modes, generation highlight, «Поколение за поколением», «Отпустить граф» | scenarios | UI |
+| FOCUS-01…04 | Focus modes, generation highlight (every chip on is the same as «все»), «Поколение за поколением», «Отпустить граф» | scenarios | UI |
 | IMPORT-01…04 | Every import file: people, families, dates; a new vault gets every card, a re-import no duplicates; broken files refused | imports | vault |
 | IMPORT-03 | A person already in the vault is completed, not duplicated | imports + scenarios | vault |
 | IMPORT-05…07 | The import dialog: summary, cards in family folders, report note, re-import, refusal | empty | UI |

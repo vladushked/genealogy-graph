@@ -21,6 +21,14 @@ describe('[FOCUS] focus, highlight, generation by generation', () => {
     expect((await state()).settings.highlightGenerations).toEqual([]);
   });
 
+  it('[FOCUS-02b] every generation chip on is the same as «все»: nothing is highlighted', async () => {
+    // The rail is drawn anew after each press: each chip is looked up again.
+    const count = await browser.$$('.genealogy-generation-chip').length;
+    for (let i = 0; i < count; i++) await browser.$$('.genealogy-generation-chip')[i].click();
+    expect((await state()).settings.highlightGenerations).toEqual([]);
+    await expect(browser.$$('.genealogy-generation-chip.is-active')).toBeElementsArrayOfSize(0);
+  });
+
   it('[FOCUS-03] «Поколение за поколением» shows titles and stops on a second press', async () => {
     await closeControls();
     const play = browser.$('.graph-controls-button.mod-animate:not(.genealogy-free-button)');
