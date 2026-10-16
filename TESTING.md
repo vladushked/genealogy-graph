@@ -75,6 +75,7 @@ The UI tests also run in Obsidian's own mobile mode (`app.emulateMobile`): `npm 
 | LAYOUT-02 | The controls over the graph do not cover each other or leave it; Obsidian's navigation bar covers none of them | scenarios | UI |
 | LAYOUT-03 | Every highlighted generation keeps its color, not only the last one pressed | scenarios | UI |
 | LAYOUT-04 | Phone: with the keyboard up (`--keyboard-height`) the dock stays clear above it and the person search lists its people above the field | scenarios | UI |
+| LAYOUT-04b | Phone, as on iOS: the system shrinks the app for the keyboard without `--keyboard-height`; on `keyboardWillShow` the dock sits right over the keyboard | scenarios | UI |
 | LAYOUT-05 | Phone: the generation rail is folded into a button of dots no wider than two dock buttons (the highlighted ones larger); it opens on it, and its cross, a free tap or dragging the graph fold it | scenarios | UI |
 | LAYOUT-06 | Проблемы and Уточнить close by their cross; on a phone a free tap closes them and the side panel | scenarios | UI |
 

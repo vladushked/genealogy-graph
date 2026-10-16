@@ -331,6 +331,8 @@
  * shrinks above it; with the keyboard up it goes below zero and would push the dock under the keyboard.
  */
 .is-phone .genealogy-view { --genealogy-bottom-bar: max(var(--view-bottom-spacing, 0px), 0px); }
+/* The keyboard is up: Obsidian's navigation bar is hidden under it, so no room is kept for it. */
+.is-phone .genealogy-panel.is-keyboard { --genealogy-bottom-bar: 0px; }
 /* On a phone a person search lists its people above the field, right against it (see PersonSuggest.placeAbove). */
 .is-phone .suggestion-container.genealogy-suggest-above { top: auto !important; bottom: var(--genealogy-suggest-bottom) !important; max-height: var(--genealogy-suggest-height); }
 .is-phone .genealogy-status { display: none; }

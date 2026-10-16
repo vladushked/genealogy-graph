@@ -623,6 +623,12 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     this.ctx = this.canvas.getContext('2d')!;
     this.readPalette();
     this.registerEvent(this.app.workspace.on('css-change', () => { this.readPalette(); this.requestRender(); }));
+    // The mobile app tells when the on-screen keyboard comes and goes; Obsidian hides its navigation bar meanwhile,
+    // but --view-bottom-spacing keeps room for it unless --keyboard-height is set, which iOS does not always do.
+    // While the keyboard is up the dock sits right over it (styles.css).
+    const keyboard = (up: boolean) => () => this.panel.toggleClass('is-keyboard', up);
+    this.registerDomEvent(window, 'keyboardWillShow' as keyof WindowEventMap, keyboard(true));
+    this.registerDomEvent(window, 'keyboardWillHide' as keyof WindowEventMap, keyboard(false));
     const zoomControls = this.panel.createDiv({ cls: 'genealogy-zoom' });
     const zoomButton = (cls: string, label: string, title: string, action: () => void) => {
       const button = zoomControls.createEl('button', { cls, text: label, attr: { type: 'button', 'aria-label': title, title } });

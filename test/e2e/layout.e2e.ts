@@ -81,6 +81,24 @@ describe(`[LAYOUT] controls over the graph, ${LAYOUT}`, () => {
     expect(geometry.list!.top).toBeGreaterThanOrEqual(0);
   });
 
+  it('[LAYOUT-04b] iOS: the system shrinks the app for the keyboard and Obsidian sets no height: the dock still sits right over it', async function () {
+    if (LAYOUT !== 'phone') this.skip();
+    const resize = (height: number) => browser.executeObsidian((_, height) => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const win = (window as unknown as { require(id: string): { getCurrentWindow(): { getSize(): number[]; setSize(w: number, h: number): void } } }).require('@electron/remote').getCurrentWindow();
+      const [width, current] = win.getSize(); win.setSize(width, current + height);
+    }, height);
+    await resize(-320);
+    await browser.execute(() => window.dispatchEvent(new Event('keyboardWillShow')));
+    await browser.pause(400);
+    const gap = await browser.execute(() => document.querySelector('.genealogy-panel')!.getBoundingClientRect().bottom - document.querySelector('.genealogy-dock')!.getBoundingClientRect().bottom);
+    await browser.execute(() => window.dispatchEvent(new Event('keyboardWillHide')));
+    await resize(320);
+    await browser.pause(400);
+    // 10 px over the keyboard, not the room of the navigation bar hidden under it.
+    expect(gap).toBeLessThanOrEqual(20);
+  });
+
   it('[LAYOUT-05] phone: the rail folds into a button of dots as wide as two dock buttons; the cross, a free tap or moving the graph fold it', async function () {
     if (LAYOUT !== 'phone') this.skip();
     const toggle = browser.$('.genealogy-rail-toggle');
