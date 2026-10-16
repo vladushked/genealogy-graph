@@ -1,4 +1,5 @@
 import { isBlankDate, lifeYears, nameLines, references, yearOf, type RawPerson } from './model';
+import { NAME_SCHEMES } from './names';
 
 /**
  * Person card properties. Flat, so they stay editable in Obsidian's Properties panel, and close to GEDCOM: each
@@ -29,6 +30,7 @@ export const FIELDS = {
   patronymic: { kind: 'text' }, // not in GEDCOM: exported as part of GIVN
   birth_surname: { kind: 'text' }, // NAME with TYPE birth (maiden name)
   name_variants: { kind: 'list' }, // other NAME records
+  name_scheme: { kind: 'enum', values: NAME_SCHEMES }, // not in GEDCOM: the card's own name tradition; none — the vault's
   sex: { kind: 'enum', values: ['male', 'female', 'unknown'] }, // SEX M/F/U
   birth_date: { kind: 'text' }, birth_place: { kind: 'text' }, // BIRT
   baptism_date: { kind: 'text' }, baptism_place: { kind: 'text' }, // BAPM, CHR

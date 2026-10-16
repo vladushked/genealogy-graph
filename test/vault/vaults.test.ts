@@ -123,7 +123,7 @@ describe('test vaults', { skip: !hasFixtures() && 'test/fixtures is missing: git
       }
       if (expected?.hints) {
         test('[EDIT-03] name hints from relatives in every scheme', () => {
-          const rel = (over: Partial<Relative>): Relative => ({ path: 'x', name: 'x', sex: 'unknown', surname: '', given_name: '', patronymic: '', birth_surname: '', parents: [], children: [], spouses: [], ...over });
+          const rel = (over: Partial<Relative>): Relative => ({ path: 'x', name: 'x', sex: 'unknown', scheme: null, surname: '', given_name: '', patronymic: '', birth_surname: '', parents: [], children: [], spouses: [], ...over });
           for (const hint of expected.hints) {
             const parents = [hint.father && rel({ sex: 'male', ...hint.father }), hint.mother && rel({ sex: 'female', ...hint.mother })].filter(Boolean) as Relative[];
             const spouses = hint.husband ? [rel({ sex: 'male', ...hint.husband })] : [];

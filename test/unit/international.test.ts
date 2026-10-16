@@ -5,10 +5,10 @@ import { cardBase, clarifications } from '../../src/edit';
 import { language, resolveLanguage, setLanguage, STRINGS } from '../../src/i18n';
 import { ansiCodePage, decode } from '../../src/import/gedcom';
 import { lifeYears, nameLines, yearLabel } from '../../src/model';
-import { assumedParent, familyName, firstSurname, icelandicPatronymic, personTitle, secondSurname, suggestNames, type Relative } from '../../src/names';
+import { assumedParent, familyName, firstSurname, icelandicPatronymic, inheritedScheme, personTitle, schemeByPlace, schemeOf, secondSurname, suggestNames, type Relative } from '../../src/names';
 import { formatDate } from '../../src/profile-text';
 
-const rel = (over: Partial<Relative>): Relative => ({ path: 'x', name: 'x', sex: 'unknown', surname: '', given_name: '', patronymic: '', birth_surname: '', parents: [], children: [], spouses: [], ...over });
+const rel = (over: Partial<Relative>): Relative => ({ path: 'x', name: 'x', sex: 'unknown', scheme: null, surname: '', given_name: '', patronymic: '', birth_surname: '', parents: [], children: [], spouses: [], ...over });
 
 test('dates in English and GEDCOM words mean what the Russian ones do', () => {
   const kinds = (values: string[]) => values.map((value) => { const date = parseDate(value); return date && date.kind !== 'unknown' ? `${date.kind} ${date.date.year}` : String(date?.kind ?? null); });
@@ -101,6 +101,36 @@ test('«Уточнить» asks only for the name parts of the scheme', () => {
   assert.deepEqual(clarifications(base, context, 'icelandic').map((item) => item.text), ['patronymic']);
   assert.deepEqual(clarifications(base, context, 'western').map((item) => item.text), ['surname']);
   assert.deepEqual(clarifications(base, context, 'russian').map((item) => item.text), ['surname', 'patronymic']);
+});
+
+test('a card of its own scheme is named and checked by it, not by the vault\'s', () => {
+  const garcia = { surname: 'García Barcha', given_name: 'Rodrigo', name_scheme: 'spanish', birth_date: '1959' };
+  assert.equal(cardBase(garcia, 'living', { scheme: 'russian', template: '{name} {born}-{died}' }), 'Rodrigo García Barcha 1959-');
+  assert.equal(schemeOf('spanish', 'russian'), 'spanish');
+  assert.equal(schemeOf(undefined, 'russian'), 'russian');
+  assert.equal(schemeOf('klingon', 'russian'), 'russian'); // an unknown value is reported in Проблемы, the vault's scheme applies
+  const context = { parents: 2, children: 1, hasPhoto: true, lifeStatus: 'living' as const };
+  assert.ok(!clarifications(garcia, context, schemeOf(garcia.name_scheme, 'russian')).some((item) => /отчеств|patronymic/i.test(item.text)));
+});
+
+test('a new relative takes the scheme of the father, then the mother, then a child or sibling; never a spouse\'s', () => {
+  const father = rel({ sex: 'male', scheme: 'spanish' }), mother = rel({ sex: 'female', scheme: 'western' }), plain = rel({ sex: 'male' });
+  assert.equal(inheritedScheme([mother, father], []), 'spanish');
+  assert.equal(inheritedScheme([mother, plain], []), 'western');
+  assert.equal(inheritedScheme([plain], [rel({ scheme: 'icelandic' })]), 'icelandic');
+  assert.equal(inheritedScheme([plain], []), null);
+});
+
+test('a birth place suggests the scheme of the country it names, as a whole word', () => {
+  assert.equal(schemeByPlace('Madrid, España'), 'spanish');
+  assert.equal(schemeByPlace('Буэнос-Айрес, Аргентина'), 'spanish');
+  assert.equal(schemeByPlace('Гавана, Куба'), 'spanish');
+  assert.equal(schemeByPlace('Краснодар, Кубань'), null);
+  assert.equal(schemeByPlace('Reykjavík, Iceland'), 'icelandic');
+  assert.equal(schemeByPlace('Budapest, Magyarország'), 'eastern');
+  assert.equal(schemeByPlace('Тула, Российская империя'), 'russian');
+  assert.equal(schemeByPlace('Boston, USA'), 'western');
+  assert.equal(schemeByPlace(''), null);
 });
 
 test('the language follows the setting, or Obsidian for «auto»; both languages have every string', () => {

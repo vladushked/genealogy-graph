@@ -3,7 +3,7 @@ import { references } from './model';
 import { lifeStatusOf, readFields, readPerson, writeFields, type FieldName, type PersonFields, type Sex } from './schema';
 import { addLink, cardBase, NEW_PARENT, RELATION_FIELDS, removeLink, REVERSE, type Naming, type RelationField } from './edit';
 import { t } from './i18n';
-import { assumedParent, personTitle, type Relative } from './names';
+import { assumedParent, ownScheme, personTitle, schemeOf, type Relative } from './names';
 
 /**
  * Writes person cards for the editor: new cards with their relationships declared from both sides, edits of an
@@ -65,7 +65,7 @@ export class Cards {
     const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
     const sex: Sex = fields.sex === 'male' || fields.sex === 'female' ? fields.sex : 'unknown';
     return {
-      path, name: view.name ?? file.basename, sex,
+      path, name: view.name ?? file.basename, sex, scheme: ownScheme(fields.name_scheme),
       surname: text(fields.surname), given_name: text(fields.given_name), patronymic: text(fields.patronymic), birth_surname: text(fields.birth_surname),
       parents: this.related(path, 'parents', fields), children: this.related(path, 'children', fields), spouses: this.related(path, 'spouses', fields),
     };
@@ -88,10 +88,10 @@ export class Cards {
       if (!siblingOf) throw new Error(t().cards.noSibling);
       const sibling = this.relative(siblingOf);
       if (!sibling) throw new Error(t().cards.siblingNotFound);
-      const { scheme } = this.host().naming;
+      const scheme = sibling.scheme ?? this.host().naming.scheme;
       const assumed = assumedParent(sibling, scheme, NEW_PARENT);
       const parent = await this.create({
-        identity: 'hypothesis', name: assumed.name,
+        identity: 'hypothesis', name: assumed.name, ...(sibling.scheme ? { name_scheme: sibling.scheme } : {}),
         surname: assumed.surname || undefined, given_name: assumed.given_name || '?', sex: assumed.sex, life_status: 'unknown',
         questions: [t().cards.commonParent(sibling.name, personTitle({ ...fields, birth_surname: undefined }, scheme))],
       }, { parents: [], children: [siblingOf], spouses: [] }, siblingOf, null);
@@ -105,7 +105,7 @@ export class Cards {
     await ensureFolder(this.app, folder);
 
     const template = await this.template();
-    const own: PersonFields = { ...fields, id: newCardId(), name: fields.name ?? personTitle(fields, host.naming.scheme) };
+    const own: PersonFields = { ...fields, id: newCardId(), name: fields.name ?? personTitle(fields, schemeOf(fields.name_scheme, host.naming.scheme)) };
     const all: Relations = { parents, children: relations.children, spouses: relations.spouses };
     for (const field of RELATION_FIELDS) own[field] = all[field].map((target) => this.link(target, path));
     const properties = { ...template.properties, ...writeFields(own) };
@@ -126,7 +126,9 @@ export class Cards {
         if (key === 'type' && frontmatter[key] !== undefined) continue;
         frontmatter[key] = value;
       }
-      const name = personTitle(fields, this.host().naming.scheme);
+      // The card's own name scheme is written only when it has one: without it the card follows the vault's.
+      if (ownScheme(fields.name_scheme)) frontmatter.name_scheme = fields.name_scheme; else delete frontmatter.name_scheme;
+      const name = personTitle(fields, schemeOf(fields.name_scheme, this.host().naming.scheme));
       if (name !== '?') frontmatter.name = name;
       for (const field of RELATION_FIELDS) {
         const key = field;

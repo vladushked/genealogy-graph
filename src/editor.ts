@@ -2,7 +2,7 @@ import { AbstractInputSuggest, ItemView, Notice, setIcon, type App, type Workspa
 import { Cards, EDITED_FIELDS, type Relations } from './cards';
 import { NEW_PARENT, parentSex, RELATION_FIELDS, type Relation, type RelationField } from './edit';
 import { t } from './i18n';
-import { assumedParent, nameFields, suggestNames, usesPatronymic, type NamePart, type NameScheme, type Relative } from './names';
+import { assumedParent, inheritedScheme, nameFields, NAME_SCHEMES, ownScheme, schemeByPlace, schemeOf, suggestNames, usesPatronymic, type NamePart, type NameScheme, type Relative } from './names';
 import { valueText, type FieldName, type PersonFields, type Sex } from './schema';
 
 /**
@@ -56,6 +56,8 @@ export class PersonEditorView extends ItemView {
   private picking: RelationField | null = null;
   private inputs = new Map<string, HTMLInputElement | HTMLSelectElement>();
   private relationEls = new Map<RelationField, HTMLElement>();
+  /** «Место рождения — Испания: испанская схема?» above the name fields. */
+  private schemeHint: HTMLElement | null = null;
   private saving = false;
   /** «Подробнее» stays open or folded across people. */
   private showDetails = false;
@@ -113,12 +115,16 @@ export class PersonEditorView extends ItemView {
       const value = fields[field];
       this.draft[field] = valueText(value);
     }
+    this.draft.name_scheme = ownScheme(fields.name_scheme) ?? '';
     this.relations = { parents: this.host.cards.related(path, 'parents', fields), children: this.host.cards.related(path, 'children', fields), spouses: this.host.cards.related(path, 'spouses', fields) };
-    this.touched = new Set(EDITED_FIELDS);
+    this.touched = new Set([...EDITED_FIELDS, 'name_scheme']);
     this.dirty = false;
     this.stopPicking();
     this.render();
   }
+
+  /** The scheme the person on the form is named by: their own (chosen or inherited), or the vault's. */
+  private scheme(): NameScheme { return schemeOf(this.draft.name_scheme, this.host.scheme()); }
 
   /** Starts a new card: on its own, or as a relative of `anchor`, with relationships and name hints filled in. */
   startCreate(relation: Relation | null, anchor: string | null) {
@@ -156,7 +162,7 @@ export class PersonEditorView extends ItemView {
     if (!person || !relation) this.focusFirst();
   }
 
-  private focusFirst() { window.setTimeout(() => (this.inputs.get(nameFields(this.host.scheme())[0]) as HTMLInputElement | undefined)?.focus(), 0); }
+  private focusFirst() { window.setTimeout(() => (this.inputs.get(nameFields(this.scheme())[0]) as HTMLInputElement | undefined)?.focus(), 0); }
 
   private render() {
     const el = this.contentEl;
@@ -180,7 +186,9 @@ export class PersonEditorView extends ItemView {
     close.toggle(mode.kind === 'create' || this.dirty);
     const form = el.createDiv({ cls: 'genealogy-editor-form' });
     // The short form: name, sex, dates and relatives; the rest folds under «Подробнее».
-    const scheme = this.host.scheme();
+    const scheme = this.scheme();
+    this.schemeHint = form.createDiv({ cls: 'genealogy-editor-hint' });
+    this.updateSchemeHint();
     for (const field of nameFields(scheme)) {
       // A patronymic outside the schemes that have one is shown only when the card has it.
       if (field === 'patronymic' && !usesPatronymic(scheme) && !(this.draft.patronymic ?? '').trim()) continue;
@@ -197,6 +205,7 @@ export class PersonEditorView extends ItemView {
     details.addEventListener('toggle', () => { this.showDetails = details.open; });
     const filled = DETAIL_FIELDS.filter((field) => (this.draft[field] ?? '').trim() && !(field === 'life_status' && this.draft[field] === 'unknown') && !(field === 'identity' && this.draft[field] === 'confirmed')).length;
     details.createEl('summary', { text: words.details(filled) });
+    this.schemeField(details);
     this.textField(details, 'birth_surname', words.birthSurname(scheme), '');
     this.selectField(details, 'life_status', words.fields.life_status, options(words.lifeOptions));
     for (const field of DETAIL_TEXT) this.textField(details, field, words.fields[field], words.placeholders[field as keyof typeof words.placeholders] ?? '');
@@ -250,6 +259,7 @@ export class PersonEditorView extends ItemView {
       this.draft[field] = input.value;
       this.touched.add(field);
       if (field === 'death_date' && !this.touched.has('life_status') && input.value.trim()) this.setValue('life_status', 'deceased');
+      if (field === 'birth_place') this.updateSchemeHint();
       this.markDirty();
     });
     this.inputs.set(field, input);
@@ -270,6 +280,41 @@ export class PersonEditorView extends ItemView {
       this.markDirty();
     });
     this.inputs.set(field, select);
+  }
+
+  /** «Схема имени»: the vault's, or one of the card's own; a change redraws the name fields for it. */
+  private schemeField(form: HTMLElement) {
+    const words = t().editor;
+    const select = this.row(form, words.nameScheme).createEl('select', { cls: 'dropdown' });
+    select.createEl('option', { value: '', text: words.schemeVault(words.schemeNames[this.host.scheme()]) });
+    for (const scheme of NAME_SCHEMES) select.createEl('option', { value: scheme, text: words.schemeNames[scheme] });
+    select.value = this.draft.name_scheme ?? '';
+    select.addEventListener('focus', () => this.stopPicking());
+    select.addEventListener('change', () => this.chooseScheme(select.value));
+    this.inputs.set('name_scheme', select);
+  }
+
+  private chooseScheme(value: string) {
+    this.touched.add('name_scheme');
+    this.draft.name_scheme = value;
+    this.markDirty();
+    this.applyHints();
+    this.render();
+  }
+
+  /** A birth place in a country of another naming tradition suggests its scheme, with a button to take it. */
+  private updateSchemeHint() {
+    const hint = this.schemeHint;
+    if (!hint) return;
+    hint.empty();
+    const place = (this.draft.birth_place ?? '').trim();
+    const suggested = schemeByPlace(place);
+    // Only while the card follows the vault's scheme: a scheme of its own was chosen on purpose.
+    if (!suggested || suggested === this.scheme() || ownScheme(this.draft.name_scheme)) { hint.hide(); return; }
+    const words = t().editor;
+    hint.show();
+    hint.createSpan({ text: words.schemeByPlace(place, words.schemeNames[suggested]) });
+    hint.createEl('button', { text: words.useScheme }).addEventListener('click', () => this.chooseScheme(suggested === this.host.scheme() ? '' : suggested));
   }
 
   private relationField(form: HTMLElement, field: RelationField) {
@@ -351,15 +396,30 @@ export class PersonEditorView extends ItemView {
     this.markDirty();
   }
 
-  private relatives(field: RelationField): Relative[] {
-    const sibling = this.mode.kind === 'create' && this.mode.siblingOf ? this.host.cards.relative(this.mode.siblingOf) : null;
-    return this.relations[field].map((id) => id === NEW_PARENT ? sibling && assumedParent(sibling, this.host.scheme(), NEW_PARENT) : this.host.cards.relative(id)).filter((item): item is Relative => Boolean(item));
+  private sibling(): Relative | null {
+    return this.mode.kind === 'create' && this.mode.siblingOf ? this.host.cards.relative(this.mode.siblingOf) : null;
   }
 
-  /** Fills name hints into fields the user has not typed in. */
+  private relatives(field: RelationField): Relative[] {
+    const sibling = this.sibling();
+    return this.relations[field].map((id) => id === NEW_PARENT ? sibling && assumedParent(sibling, sibling.scheme ?? this.host.scheme(), NEW_PARENT) : this.host.cards.relative(id)).filter((item): item is Relative => Boolean(item));
+  }
+
+  /**
+   * Fills name hints into fields the user has not typed in. A new card takes the name scheme of its relatives (see
+   * inheritedScheme) until one is chosen on the form; a change of scheme redraws the name fields.
+   */
   private applyHints() {
+    if (this.mode.kind === 'create' && !this.touched.has('name_scheme')) {
+      const sibling = this.sibling();
+      const inherited = inheritedScheme(this.relatives('parents'), [...this.relatives('children'), ...(sibling ? [sibling] : [])]) ?? '';
+      if (inherited !== (this.draft.name_scheme ?? '')) {
+        this.draft.name_scheme = inherited;
+        if (this.contentEl.childElementCount) this.render();
+      }
+    }
     const sex = (this.draft.sex ?? 'unknown') as Sex;
-    const hints = suggestNames(this.host.scheme(), sex, this.relatives('parents'), this.relatives('children'), this.relatives('spouses'));
+    const hints = suggestNames(this.scheme(), sex, this.relatives('parents'), this.relatives('children'), this.relatives('spouses'));
     for (const field of ['surname', 'given_name', 'patronymic'] as NamePart[]) if (!this.touched.has(field)) this.setValue(field, hints[field]);
   }
 
@@ -393,6 +453,7 @@ export class PersonEditorView extends ItemView {
     for (const field of EDITED_FIELDS) {
       fields[field] = (this.draft[field] ?? '').trim();
     }
+    fields.name_scheme = ownScheme(this.draft.name_scheme) ?? '';
     return fields;
   }
 

@@ -48,6 +48,7 @@ Each test names its scenario id in its title.
 | EDIT-03 | Name hints in every scheme | international | vault |
 | EDIT-05 | File names follow the template, so renaming recognises them | all | vault |
 | EDIT-06…07 | Spanish and Icelandic hints and field order in the form | international | UI |
+| EDIT-08…09 | A card's own name scheme in a vault of another one: a Spanish father's child inherits it, gets Spanish surnames and no patronymic in «Уточнить»; a birth place in Spain suggests the scheme | international | UI |
 | OPEN-01…04 | The command opens the graph with every person; no console errors; «Найти себя»; the empty vault invitation | scenarios, empty | UI |
 | SELECT-01…05 | Click, Shift+click, deselect, Esc, a click on empty space; the side form follows; Ctrl+F search with namesakes | scenarios | UI |
 | PROFILE-01…04 | Double click opens the profile; relative chips and «Назад»; the graph freezes; context menu | scenarios | UI |

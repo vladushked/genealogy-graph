@@ -2,7 +2,7 @@ import { references, type Graph } from './model';
 import type { LifeStatus, PersonFields, Sex } from './schema';
 import { dateYear } from './dates';
 import { t } from './i18n';
-import { personTitle, usesPatronymic, usesSurname, type NameScheme, type Relative } from './names';
+import { personTitle, schemeOf, usesPatronymic, usesSurname, type NameScheme, type Relative } from './names';
 export type { Relative } from './names';
 
 /**
@@ -39,7 +39,7 @@ export function cardBase(fields: PersonFields, lifeStatus: LifeStatus, naming: N
   const year = (value: unknown) => { const found = dateYear(value); return found === null ? null : String(found); };
   const hasParts = Boolean(text(fields.surname) || text(fields.given_name) || text(fields.patronymic));
   const values: Record<(typeof FILE_NAME_PLACEHOLDERS)[number], string> = {
-    name: hasParts ? personTitle(fields, naming.scheme) : text(fields.name) || '?',
+    name: hasParts ? personTitle(fields, schemeOf(fields.name_scheme, naming.scheme)) : text(fields.name) || '?',
     surname: text(fields.surname), given: text(fields.given_name), patronymic: text(fields.patronymic), birth_surname: text(fields.birth_surname),
     born: year(fields.birth_date) ?? '?',
     died: lifeStatus === 'living' ? '' : lifeStatus === 'deceased' ? year(fields.death_date) ?? '?' : '?',
@@ -124,7 +124,7 @@ export function clarifyCards(graph: Graph, cards: ClarifyCard[], resolve: (link:
     const entry = of(card.path);
     for (const link of [...references(card.fields.parents), ...references(card.fields.adoptive_parents)]) { const target = resolve(link, card.path); if (target) entry.parents.add(target); }
     for (const link of references(card.fields.children)) { const target = resolve(link, card.path); if (target) entry.children.add(target); }
-    const notes = clarifications(card.fields, { parents: entry.parents.size, children: entry.children.size, hasPhoto: card.hasPhoto, lifeStatus: card.lifeStatus }, scheme);
+    const notes = clarifications(card.fields, { parents: entry.parents.size, children: entry.children.size, hasPhoto: card.hasPhoto, lifeStatus: card.lifeStatus }, schemeOf(card.fields.name_scheme, scheme));
     if (notes.length) out.set(card.path, notes);
   }
   return out;

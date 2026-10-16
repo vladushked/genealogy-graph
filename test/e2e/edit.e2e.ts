@@ -1,5 +1,5 @@
 import { browser, expect } from '@wdio/globals';
-import { clickNode, fillForm, selectOnly, formValues, frontmatter, openVault, setSettings, showEditor, state, waitFile, waitPeople } from './helpers';
+import { clickNode, fillForm, formField, selectOnly, formValues, frontmatter, openVault, setSettings, showEditor, state, vaultFiles, waitFile, waitIndexed, waitPeople } from './helpers';
 
 const save = async () => { await showEditor(); await browser.$('.genealogy-editor-actions .mod-cta').click(); };
 const addRelative = async (label: string) => { await showEditor(); await browser.$('.genealogy-editor-add').$(`button=${label}`).click(); };
@@ -72,6 +72,46 @@ describe('[EDIT] name hints in other schemes', () => {
     const labels = await browser.$$('.genealogy-editor-row label').map((label) => label.getText());
     expect(labels.slice(0, 3)).toEqual(['Given name', 'Patronymic', 'Family name']);
     expect(await formValues()).toContain('Jónsdóttir');
+    await closeEditor();
+  });
+
+  it('[EDIT-08] a card of its own scheme: in a Russian vault a Spanish father\'s child is Spanish and keeps the scheme', async () => {
+    await setSettings({ nameScheme: 'russian' });
+    const gabriel = 'García/Gabriel José García Márquez 1927-2014.md';
+    await browser.executeObsidian(async ({ app }, path) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await app.fileManager.processFrontMatter(app.vault.getAbstractFileByPath(path) as any, (frontmatter) => { frontmatter.name_scheme = 'spanish'; });
+    }, gabriel);
+    await browser.pause(500);
+    await waitIndexed();
+    // «Уточнить» asks him for no patronymic, though the vault's scheme has one.
+    const notes = await browser.executeObsidian(({ app }, path) => ((app as any).plugins.plugins['genealogy-graph'].clarifications.get(path) ?? []).map((note: { text: string }) => note.text) as string[], gabriel);
+    expect(notes.join(' ')).not.toMatch(/patronymic/i);
+    await clickNode(gabriel);
+    await addRelative('child');
+    await fillForm({ Sex: 'male', 'Given names': 'Tomás' });
+    expect(await formValues()).toContain('García Barcha');
+    expect(await (await formField('Name scheme')).getValue()).toBe('spanish');
+    await save();
+    await browser.waitUntil(async () => (await vaultFiles('García')).some((path) => path.includes('Tomás García Barcha')), { timeout: 10000, timeoutMsg: 'no card for Tomás' });
+    const path = (await vaultFiles('García')).find((item) => item.includes('Tomás García Barcha'))!;
+    await waitFile(path);
+    await browser.waitUntil(async () => (await frontmatter(path))?.name_scheme === 'spanish', { timeout: 5000, timeoutMsg: 'the new card has no name_scheme' });
+  });
+
+  it('[EDIT-09] a birth place in Spain suggests the Spanish scheme while the card follows the vault\'s', async () => {
+    await browser.executeObsidianCommand('genealogy-graph:add-person');
+    await showEditor();
+    await browser.execute(() => { (document.querySelector('.genealogy-editor-details') as HTMLDetailsElement).open = true; });
+    await fillForm({ 'Birth place': 'Sevilla, España' });
+    const hint = browser.$('.genealogy-editor-hint');
+    await expect(hint).toBeDisplayed();
+    await expect(hint).toHaveText(expect.stringContaining('Spanish'));
+    await hint.$('button').click();
+    expect(await (await formField('Name scheme')).getValue()).toBe('spanish');
+    await expect(browser.$('.genealogy-editor-hint')).not.toBeDisplayed();
+    const labels = await browser.$$('.genealogy-editor-row label').map((label) => label.getText());
+    expect(labels.slice(0, 2)).toEqual(['Given names', 'Surnames']);
     await closeEditor();
   });
 });

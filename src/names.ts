@@ -18,6 +18,8 @@ export type NamePart = 'surname' | 'given_name' | 'patronymic';
 /** What the editor knows about a relative, read from its card. */
 export interface Relative {
   path: string; name: string; sex: Sex;
+  /** The card's own name scheme (`name_scheme`); null when it follows the vault's. */
+  scheme: NameScheme | null;
   surname: string; given_name: string; patronymic: string; birth_surname: string;
   parents: string[]; children: string[]; spouses: string[];
 }
@@ -25,6 +27,53 @@ export interface Relative {
 export interface NameParts { surname?: unknown; given_name?: unknown; patronymic?: unknown; birth_surname?: unknown }
 
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : typeof value === 'number' ? String(value) : '';
+
+/** A card's own name scheme, from its `name_scheme` property; null when it has none (or an unknown one). */
+export const ownScheme = (value: unknown): NameScheme | null => NAME_SCHEMES.includes(value as NameScheme) ? value as NameScheme : null;
+
+/** The scheme a card's person is named by: their own, or the vault's. */
+export const schemeOf = (value: unknown, vault: NameScheme): NameScheme => ownScheme(value) ?? vault;
+
+/**
+ * The scheme a new relative takes from the people they are added next to: the father's, then the mother's, then a
+ * child's or a sibling's — so a Spanish branch stays Spanish once its first card says so. Spouses give none: a
+ * husband or wife often comes from another tradition. Null when nobody has a scheme of their own.
+ */
+export function inheritedScheme(parents: Relative[], kin: Relative[]): NameScheme | null {
+  const ordered = [...parents.filter((parent) => parent.sex === 'male'), ...parents.filter((parent) => parent.sex !== 'male'), ...kin];
+  return ordered.find((relative) => relative.scheme)?.scheme ?? null;
+}
+
+/**
+ * Countries whose names tell the naming tradition, in the languages a birth place is likely written in. Only a
+ * suggestion: a Russian may well be born in Madrid.
+ */
+const PLACE_SCHEMES: Array<[NameScheme, string[]]> = [
+  ['spanish', ['españa', 'spain', 'испания', 'méxico', 'mexico', 'мексика', 'argentina', 'аргентина', 'colombia', 'колумбия', 'perú', 'peru', 'перу',
+    'chile', 'чили', 'venezuela', 'венесуэла', 'cuba', 'куба', 'ecuador', 'эквадор', 'bolivia', 'боливия', 'uruguay', 'уругвай', 'paraguay', 'парагвай',
+    'guatemala', 'гватемала', 'honduras', 'гондурас', 'nicaragua', 'никарагуа', 'el salvador', 'сальвадор', 'costa rica', 'коста-рика', 'panamá', 'panama', 'панама',
+    'república dominicana', 'dominican republic', 'доминиканская республика', 'puerto rico', 'пуэрто-рико']],
+  ['icelandic', ['ísland', 'iceland', 'исландия']],
+  ['eastern', ['china', '中国', 'китай', 'japan', '日本', 'япония', 'korea', '한국', 'корея', 'hungary', 'magyarország', 'венгрия', 'vietnam', 'việt nam', 'вьетнам']],
+  ['russian', ['россия', 'russia', 'российская империя', 'ссср', 'ussr', 'украина', 'україна', 'ukraine', 'беларусь', 'белоруссия', 'belarus', 'казахстан', 'kazakhstan']],
+  ['western', ['usa', 'united states', 'сша', 'england', 'англия', 'united kingdom', 'великобритания', 'scotland', 'шотландия', 'ireland', 'ирландия',
+    'germany', 'deutschland', 'германия', 'france', 'франция', 'italy', 'italia', 'италия', 'canada', 'канада', 'australia', 'австралия',
+    'netherlands', 'nederland', 'нидерланды', 'poland', 'polska', 'польша', 'czechia', 'česko', 'чехия']],
+];
+
+/** The scheme a birth place suggests, by the country named in it; null when it names none of the known ones. */
+export function schemeByPlace(place: string): NameScheme | null {
+  const text = place.toLocaleLowerCase();
+  if (!text.trim()) return null;
+  for (const [scheme, countries] of PLACE_SCHEMES) {
+    for (const country of countries) {
+      const at = text.indexOf(country);
+      // A whole word: «Куба» is Cuba, «Кубань» is not.
+      if (at >= 0 && !/\p{L}/u.test(text[at - 1] ?? '') && !/\p{L}/u.test(text[at + country.length] ?? '')) return scheme;
+    }
+  }
+  return null;
+}
 
 /** Parts of the name in the order the form asks for them. */
 export function nameFields(scheme: NameScheme): NamePart[] {
@@ -108,7 +157,7 @@ export function assumedParent(sibling: Relative, scheme: NameScheme, newParent: 
     : scheme === 'spanish' ? firstSurname(born) : scheme === 'icelandic' ? '' : born;
   const sex: Sex = given ? 'male' : 'unknown';
   return {
-    path: newParent, name: personTitle({ surname, given_name: given || '?' }, scheme), sex,
+    path: newParent, name: personTitle({ surname, given_name: given || '?' }, scheme), sex, scheme: sibling.scheme,
     surname, given_name: given, patronymic: '', birth_surname: '',
     parents: [], children: [sibling.path], spouses: [],
   };

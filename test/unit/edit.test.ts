@@ -31,7 +31,7 @@ test('surname forms', () => {
   assert.equal(genderSurname('Кравченко', 'female'), 'Кравченко');
 });
 
-const rel = (over: Partial<Relative>): Relative => ({ path: 'x', name: 'x', sex: 'unknown', surname: '', given_name: '', patronymic: '', birth_surname: '', parents: [], children: [], spouses: [], ...over });
+const rel = (over: Partial<Relative>): Relative => ({ path: 'x', name: 'x', sex: 'unknown', scheme: null, surname: '', given_name: '', patronymic: '', birth_surname: '', parents: [], children: [], spouses: [], ...over });
 
 test('name hints', () => {
   const father = rel({ sex: 'male', surname: 'Озеров', given_name: 'Сергей' });
