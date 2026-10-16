@@ -42,4 +42,17 @@ describe(`[LAYOUT] controls over the graph, ${LAYOUT}`, () => {
     });
     expect(overlaps).toEqual([]);
   });
+
+  it('[LAYOUT-03] every highlighted generation keeps its color, not only the last one pressed', async () => {
+    const rail = browser.$('.genealogy-generation-rail');
+    for (const label of ['−2', '−1', '+1']) await rail.$(`button*=${label}`).click();
+    const chips = await browser.execute(() => [...document.querySelectorAll<HTMLElement>('.genealogy-generation-chip.is-active')].map((chip) => {
+      const probe = document.body.createDiv(); probe.style.color = getComputedStyle(chip).getPropertyValue('--genealogy-chip');
+      const want = getComputedStyle(probe).color; probe.remove();
+      return { text: chip.textContent, background: getComputedStyle(chip).backgroundColor, want };
+    }));
+    expect(chips.length).toBe(3);
+    for (const chip of chips) expect(chip.background).toBe(chip.want);
+    await rail.$('.genealogy-generation-reset').click();
+  });
 });

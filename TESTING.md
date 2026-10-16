@@ -72,6 +72,7 @@ The UI tests also run in Obsidian's own mobile mode (`app.emulateMobile`): `npm 
 | --- | --- | --- | --- |
 | LAYOUT-01 | Every button over the graph shows its icon and its whole text (on a tablet Obsidian pads every button) | scenarios | UI |
 | LAYOUT-02 | The controls over the graph do not cover each other or leave it; Obsidian's navigation bar covers none of them | scenarios | UI |
+| LAYOUT-03 | Every highlighted generation keeps its color, not only the last one pressed | scenarios | UI |
 
 ## Phone screenshots
 
