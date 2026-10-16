@@ -2,7 +2,7 @@
 
 An interactive family tree for Obsidian, drawn from your notes: one note per person, relatives in its properties.
 
-![Genealogy Graph: the graph, a kinship route, roots, a profile and export for print](https://raw.githubusercontent.com/vladushked/genealogy-graph/main/docs/media/demo.gif)
+![Genealogy Graph: the graph, a kinship route, roots, a profile and export for print](https://raw.githubusercontent.com/vladushked/genealogy-graph-media/main/readme/demo.gif)
 
 ## Features
 
@@ -25,7 +25,7 @@ Your data stays plain Markdown: properties follow GEDCOM, so the vault stays rea
 2. Run **Open genealogy graph** from the command palette.
 3. In the plugin settings choose your own card: generations are counted from it.
 
-The properties, every control and the import are described in the [full guide](docs/guide.md).
+Guides: [the interface, step by step](docs/guides/interface.md) (computer, phone, tablet) · [the data](docs/guides/data.md) · [import](docs/guides/import.md) · [export](docs/guides/export.md).
 
 ## Install
 
@@ -41,7 +41,7 @@ The plugin works offline: it makes no network requests and collects nothing.
 
 ## Development
 
-See the [guide](docs/guide.md#build) and [TESTING.md](TESTING.md). The GIF and the screenshots are recorded from a fictional family by `npm run media`.
+See [TESTING.md](TESTING.md) for the build and the tests. The GIF and the screenshots are recorded from a fictional family by `npm run media`, the guides' GIFs by `npm run media:guides`.
 
 ## License
 

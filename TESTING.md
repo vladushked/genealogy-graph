@@ -1,5 +1,19 @@
 # Testing Genealogy Graph
 
+## Build
+
+Requires Node.js 20+.
+
+```sh
+npm ci
+npm test
+npm run build
+```
+
+The bundled DejaVu Sans font is subset for exported files to Latin, Greek, Cyrillic, Armenian, Georgian, Hebrew, Arabic and common punctuation (`pyftsubset` with `--unicodes=U+0020-007E,U+00A0-02FF,U+0300-036F,U+0370-03FF,U+0400-052F,U+0530-058F,U+0590-05FF,U+0600-06FF,U+10A0-10FF,U+1E00-1EFF,U+1F00-1FFF,U+2000-206F,U+2070-209F,U+20A0-20CF,U+2100-218F,U+2190-21FF,U+FB1D-FB4F,U+FB50-FDFF,U+FE70-FEFF --layout-features='*' --no-hinting`). Its license is in `assets/LICENSE-font.txt`.
+
+## Tests
+
 Three layers, from fast to real:
 
 | Layer | What | Where | Run |
@@ -85,4 +99,8 @@ The UI tests also run in Obsidian's own mobile mode (`app.emulateMobile`): `npm 
 
 ## README media
 
-`npm run media` records `docs/media/demo.gif` and the directory screenshots in `docs/media/screenshots/` (1200×800) from the fictional `showcase` vault: the same wdio-obsidian-service setup as the UI tests (`wdio.media.conf.mts`, `docs/media/record.media.ts`), frames from Electron's `capturePage`, then `docs/media/assemble.mjs` builds the GIF with ffmpeg. An Obsidian window opens on the desktop while it records.
+The README GIF, its screenshots and the guides' GIFs live in a separate repository, [genealogy-graph-media](https://github.com/vladushked/genealogy-graph-media), so this one stays light; the README and the guides show them by their raw URLs. The commands below write into its clone next to this one (`../genealogy-graph-media`, or `MEDIA_DIR`); commit and push it there.
+
+`npm run media` records `readme/demo.gif` and the screenshots in `readme/screenshots/` (1200×800) from the fictional `showcase` vault: the same wdio-obsidian-service setup as the UI tests (`wdio.media.conf.mts`, `docs/media/record.media.ts`), frames from Electron's `capturePage`, then `docs/media/assemble.mjs` builds the GIF with ffmpeg. An Obsidian window opens on the desktop while it records.
+
+`npm run media:guides` records the GIFs of the guides (`guides/`, ~0.2–1.6 MB each, 800 px wide for a computer or tablet, 360 px for a phone) and the card screenshot of the data guide, in English, on the `showcase` and `empty` vaults: `docs/media/guides.media.ts` drives Obsidian on a computer, in the phone layout and in the tablet layout with touch input (drawn fingertips stand in for the fingers), and `docs/media/assemble.mjs guides` makes the GIFs. `CLIPS=desktop-route,phone-gestures` records only those clips.
