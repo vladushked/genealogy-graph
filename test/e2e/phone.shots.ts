@@ -40,9 +40,11 @@ describe('[PHONE] the graph on a phone', () => {
     await waitSettled();
     await shot('1-graph');
     await tap('.genealogy-rail-toggle');
+    await browser.pause(500); // the button narrows, then the rail grows
     await browser.execute(() => [...document.querySelectorAll<HTMLElement>('.genealogy-generation-chip')].find((chip) => chip.textContent?.startsWith('−1'))?.click());
     await shot('1b-generations');
     await tap('.genealogy-rail-toggle');
+    await browser.pause(500);
     await shot('1c-folded');
     await tap('.genealogy-controls .mod-open');
     await shot('2-controls');
@@ -64,6 +66,7 @@ describe('[PHONE] the graph on a phone', () => {
     await browser.keys('Escape');
     await tap('.genealogy-dock .genealogy-dock-button:nth-of-type(2)');
     await shot('6-route');
+    if (await browser.$('.genealogy-rail-toggle').isDisplayed()) throw new Error('the generation button is over the route card');
     await tap('.genealogy-dock .genealogy-dock-button:nth-of-type(2)');
     await tap('.genealogy-clarify-button');
     await shot('7-clarify');

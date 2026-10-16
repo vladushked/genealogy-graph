@@ -113,7 +113,7 @@
 .genealogy-problems { position: absolute; z-index: 3; top: calc(var(--size-4-3) + 34px); left: var(--size-4-3); width: 300px; max-height: calc(100% - 100px); overflow-y: auto;
   padding: var(--size-2-3) var(--size-4-3); cursor: default; font-size: var(--font-ui-smaller);
   background: var(--menu-background, var(--background-secondary)); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); box-shadow: var(--shadow-s); }
-.genealogy-problems-title { font-weight: var(--font-medium); font-size: var(--font-ui-small); padding: 4px 0 6px; }
+.genealogy-problems-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: var(--font-medium); font-size: var(--font-ui-small); padding: 4px 0 6px; }
 .genealogy-problems-group { padding: 4px 0; border-top: 1px solid var(--background-modifier-border); }
 .genealogy-problems-person { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
 .genealogy-problems-person a { font-weight: var(--font-semibold); }
@@ -336,26 +336,48 @@
 .is-phone .genealogy-status { display: none; }
 .is-phone .genealogy-dock { left: 12px; right: 12px; width: auto; min-width: 0; transform: none; bottom: calc(var(--genealogy-bottom-bar) + 10px); }
 .is-phone .genealogy-zoom { right: 12px; bottom: calc(var(--genealogy-bottom-bar) + 60px); }
-/* The generations stay between the top row of buttons (64 px) and their button above the dock, centered in that room. */
-.is-phone .genealogy-left { top: 64px; bottom: calc(var(--genealogy-bottom-bar) + 110px); height: fit-content; margin-block: auto; transform: none;
-  max-height: calc(100% - 64px - var(--genealogy-bottom-bar) - 110px); }
 /*
- * On a phone the rail is folded into a button over «Я», level with «⤢»: a dot per generation (or number of relatives),
- * the highlighted ones larger. It opens the rail; pressing it again or moving the graph folds the rail away, so the
- * rail never hides people and «⤢» fits the graph to the whole screen.
+ * On a phone the rail is folded into a button over «Я», level with «⤢», no wider than «Я» and the route button: a dot
+ * per generation (or number of relatives), the highlighted ones larger. Pressed, the button narrows to a cross and
+ * the rail grows up out of it, one pill with the cross at its foot; the cross, a tap on empty space or moving the
+ * graph fold it back the other way. So the rail never hides people, and «⤢» fits the graph to the whole screen.
  */
 .genealogy-rail-toggle { display: none; }
-.is-phone .genealogy-panel:not(.is-rail-open) .genealogy-left { display: none; }
-.is-phone .genealogy-view button.genealogy-rail-toggle { position: absolute; z-index: 2; left: 12px; bottom: calc(var(--genealogy-bottom-bar) + 60px);
-  display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border-radius: 20px; }
-.is-phone .genealogy-view button.genealogy-rail-toggle.is-active { border-color: var(--interactive-accent); }
-.genealogy-rail-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--genealogy-chip); transition: transform 0.15s ease-out; }
-.genealogy-rail-dot.is-active { transform: scale(1.6); }
+/* The route and roots card above the dock covers it: the button steps aside while the card is open. */
+.is-phone .genealogy-view .has-route-card > button.genealogy-rail-toggle { display: none; }
+.is-phone .genealogy-left { left: 12px; top: auto; bottom: calc(var(--genealogy-bottom-bar) + 60px); width: 56px; box-sizing: border-box; padding: 4px 4px 46px;
+  height: auto; margin: 0; transform: none; max-height: calc(100% - 64px - var(--genealogy-bottom-bar) - 60px);
+  clip-path: inset(calc(100% - 48px) 0 0 0 round 24px); opacity: 0; visibility: hidden;
+  transition: clip-path 0.12s ease-in, opacity 0.08s ease-in 0.04s, visibility 0s linear 0.12s; }
+.is-phone .is-rail-open .genealogy-left { clip-path: inset(0 0 0 0 round 24px); opacity: 1; visibility: visible;
+  transition: clip-path 0.15s ease-out 0.1s, opacity 0.05s linear 0.1s, visibility 0s linear 0.1s; }
+/* «все» on top: only the cross stays at the foot. */
+.is-phone .genealogy-generation-reset { order: -1; }
+.is-phone .genealogy-view button.genealogy-rail-toggle { position: absolute; z-index: 3; left: 12px; bottom: calc(var(--genealogy-bottom-bar) + 60px);
+  display: flex; align-items: center; justify-content: flex-start; width: var(--genealogy-toggle-width, 88px); max-width: 88px; height: 40px; padding: 0 12px;
+  border-radius: 20px; overflow: hidden;
+  transition: width 0.12s ease-out 0.12s, left 0.12s ease-out 0.12s, bottom 0.12s ease-out 0.12s, padding 0.12s 0.12s, background-color 0.08s 0.12s, border-color 0.08s 0.12s, box-shadow 0.08s 0.12s; }
+.is-phone .genealogy-view button.genealogy-rail-toggle.is-active { width: 48px; left: 16px; bottom: calc(var(--genealogy-bottom-bar) + 64px); padding: 0;
+  background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  transition: width 0.1s ease-in, left 0.1s ease-in, bottom 0.1s ease-in, padding 0.1s, background-color 0.06s 0.08s, border-color 0.06s 0.08s, box-shadow 0.06s 0.08s; }
+/* The dots that do not fit are cut here, not by the button, which keeps its own size. */
+.genealogy-rail-dots { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; transition: opacity 0.1s; }
+.genealogy-rail-dots.is-cut-end { mask-image: linear-gradient(to right, #000 calc(100% - 10px), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 10px), transparent); }
+.genealogy-rail-dots.is-cut-start { mask-image: linear-gradient(to left, #000 calc(100% - 10px), transparent); -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 10px), transparent); }
+.genealogy-rail-dots.is-cut-start.is-cut-end { mask-image: linear-gradient(to right, transparent, #000 10px, #000 calc(100% - 10px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 10px, #000 calc(100% - 10px), transparent); }
+.genealogy-rail-close { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.12s; }
+.is-active > .genealogy-rail-dots { opacity: 0; }
+.is-active > .genealogy-rail-close { opacity: 1; }
+/* A highlighted dot is larger in size, not scale: a scaled one would run into its neighbour. */
+.genealogy-rail-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--genealogy-chip); transition: width 0.15s ease-out, height 0.15s ease-out; }
+.genealogy-rail-dot.is-active { width: 11px; height: 11px; }
 /* The top row in one line, left of the gear: the corner buttons, then the focus as icons only (named in their tooltips). */
 .is-phone .genealogy-top { right: 64px; grid-template-columns: auto auto 1fr; }
 .is-phone .genealogy-focus-bar .genealogy-mode-label { display: none; }
 .is-phone .genealogy-controls:not(.is-close) { z-index: 4; left: 8px; right: 8px; width: auto; max-height: calc(100% - var(--genealogy-bottom-bar) - 70px); }
-.is-phone .genealogy-problems { top: 60px; left: 8px; right: 8px; width: auto; max-height: calc(100% - var(--genealogy-bottom-bar) - 110px); }
+/* Down to the row of the generation button and «⤢». */
+.is-phone .genealogy-problems { top: 60px; left: 8px; right: 8px; width: auto; max-height: calc(100% - 60px - var(--genealogy-bottom-bar) - 110px); }
 /*
  * Phone controls in the style of the dock: frosted, 40 px, finger-sized. The generations are one pill of round buttons
  * that scrolls when there are many; the gear, ▶ and «wind» are separate round buttons; the focus is a segmented control.
@@ -369,7 +391,7 @@
   border: 1px solid var(--background-modifier-border); color: var(--text-muted);
   background: color-mix(in srgb, var(--background-primary) 72%, transparent); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22); }
-.is-phone .genealogy-left { padding: 4px; border-radius: 24px; gap: 2px; }
+.is-phone .genealogy-left { border-radius: 24px; gap: 2px; }
 .is-phone .genealogy-generation-rail { gap: 2px; align-items: stretch; scroll-snap-type: y proximity; overscroll-behavior: contain; touch-action: pan-y; }
 .is-phone .genealogy-generation-rail.is-scrollable { mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 14px), transparent);
   -webkit-mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 14px), transparent); }

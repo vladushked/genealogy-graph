@@ -239,6 +239,23 @@ export const emptyPoint = async () => { await waitSettled(); return browser.exec
   throw new Error('no empty spot on the graph');
 }); };
 
+/** A tap on an empty spot of the graph as it is now, with whatever is open over it left in place. */
+export async function tapEmpty() {
+  const point = await browser.executeObsidian(({ app }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const view = app.workspace.getLeavesOfType('genealogy-graph-view')[0].view as any;
+    const rect = view.panel.getBoundingClientRect();
+    for (let sy = 0.25; sy < 0.85; sy += 0.04) for (let sx = 0.15; sx < 0.9; sx += 0.04) {
+      const clientX = Math.round(rect.left + rect.width * sx), clientY = Math.round(rect.top + rect.height * sy);
+      if (document.elementFromPoint(clientX, clientY) === view.canvas && !view.hitAt({ clientX, clientY })) return { x: clientX, y: clientY };
+    }
+    return null;
+  });
+  if (!point) throw new Error('no empty spot on the graph');
+  await browser.action('pointer').move({ ...point, origin: 'viewport' }).down().up().perform();
+  await browser.pause(450);
+}
+
 /** Keyboard focus on the graph, as after a click on it. */
 export const focusGraph = () => browser.executeObsidian(({ app }) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

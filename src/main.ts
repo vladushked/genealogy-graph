@@ -107,6 +107,8 @@ const TIMELAPSE_HOLD_MS = 2500;
 const TIMELAPSE_DIM = 0.45;
 /** Two clicks on the same person within this time open the note. */
 const DOUBLE_CLICK_MS = 400;
+/** Dots the folded generation button shows on a phone: it is as wide as two dock buttons. */
+const RAIL_DOTS = 5;
 /** Holding a finger this long on a person opens their menu, as the right click does. */
 const LONG_PRESS_MS = 500;
 /** How a problem is named in Проблемы and in the tooltip of a marked person. */
@@ -525,6 +527,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
   private generationRail!: HTMLElement;
   /** On a phone the rail is folded into this button of colored dots, one per chip (styles.css). */
   private railToggle!: HTMLElement;
+  private railDots!: HTMLElement;
   /** Relative count groups of the visible people and the largest count, for the «Число родственников» focus. */
   private relativeGroups: Array<{ from: number; to: number | null }> = [];
   private maxLinks = 0;
@@ -564,6 +567,8 @@ class GenealogyGraphView extends ItemView implements HoverParent {
   private wheelTime: number | null = null;
   private status!: HTMLElement;
   private dock!: HTMLElement;
+  /** Opens or folds the side panel (see buildControls). */
+  private setControlsOpen: (open: boolean) => void = () => {};
   /** The side panel with search, filters and view settings, and its folded button. */
   private controls!: HTMLElement;
   private sections = new Map<string, HTMLElement>();
@@ -1619,7 +1624,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       else if (hit?.kind === 'eye') this.hideSelectedLink();
       else if (hit?.kind === 'badge') this.revealAt(hit.id);
       else if (hit?.kind === 'link') { this.deselectAll(); this.selectLink(this.selectedLink === hit.id ? null : hit.id); }
-      else { this.deselectAll(); this.selectLink(null); }
+      else if (!this.closeOverlays()) { this.deselectAll(); this.selectLink(null); }
     };
     panel.addEventListener('pointerup', (event) => finish(event, true));
     panel.addEventListener('pointercancel', (event) => finish(event, false));
@@ -1905,6 +1910,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       settings.controls.open = value;
       this.plugin.requestSave();
     };
+    this.setControlsOpen = setOpen;
     open.addEventListener('click', () => setOpen(true));
     close.addEventListener('click', () => setOpen(false));
     // Under the gear while the panel is folded, as the timelapse button of the graph view.
@@ -1957,6 +1963,9 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     // Left side: node colors, then the generations to highlight.
     const left = this.panel.createDiv({ cls: 'genealogy-left' });
     this.railToggle = this.panel.createEl('button', { cls: 'genealogy-rail-toggle', attr: { type: 'button', 'aria-label': words.rail.toggle } });
+    this.railDots = this.railToggle.createSpan({ cls: 'genealogy-rail-dots' });
+    // Open, the button shrinks to this cross at the foot of the rail.
+    setIcon(this.railToggle.createSpan({ cls: 'genealogy-rail-close' }), 'x');
     this.railToggle.addEventListener('click', () => this.showRail(!this.panel.hasClass('is-rail-open')));
     this.generationRail = left.createDiv({ cls: 'genealogy-generation-rail' });
     dragScroll(this.generationRail);
@@ -2016,6 +2025,9 @@ class GenealogyGraphView extends ItemView implements HoverParent {
   private updateRouteCard() {
     const card = this.routeCard; card.empty();
     card.toggle(this.special());
+    // On a phone the card covers the generation button: the button and its rail step aside while it is open.
+    this.panel.toggleClass('has-route-card', this.special());
+    if (this.special()) this.showRail(false);
     if (this.rootsMode) { this.renderRootsCard(card); return; }
     if (!this.pathMode) return;
     const ends = this.pathEndpoints;
@@ -2192,7 +2204,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
   /** The highlight column: one button per generation (oldest at the top, «Я» on yours), or per relative count. */
   private updateGenerationRail() {
     const rail = this.generationRail; rail.empty();
-    this.railToggle.empty();
+    this.railDots.empty();
     const settings = this.plugin.settings;
     const byRelatives = settings.focus === 'relatives';
     // Each button highlights its people; several can be on at once.
@@ -2208,13 +2220,23 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     const list = byRelatives ? settings.highlightRelatives : settings.highlightGenerations;
     const highlighted = new Set(list);
     const save = (next: number[]) => this.changeView((data) => { if (byRelatives) data.highlightRelatives = next; else data.highlightGenerations = next; });
+    // No wider than «Я» and the route button together: as many dots as fit, the cut edges fade out. The window of
+    // dots starts so that the first highlighted one is in it.
+    const first = chips.findIndex((chip) => highlighted.has(chip.key));
+    const start = Math.max(0, Math.min(chips.length - RAIL_DOTS, first - 2));
+    const shown = chips.slice(start, start + RAIL_DOTS);
+    this.railToggle.style.setProperty('--genealogy-toggle-width', `${24 + shown.length * 13 - 6 + shown.filter((chip) => highlighted.has(chip.key)).length * 4}px`);
+    this.railDots.toggleClass('is-cut-start', start > 0);
+    this.railDots.toggleClass('is-cut-end', start + RAIL_DOTS < chips.length);
+    for (const chip of shown) {
+      const dot = this.railDots.createSpan({ cls: 'genealogy-rail-dot' });
+      dot.style.setProperty('--genealogy-chip', chip.color);
+      dot.toggleClass('is-active', highlighted.has(chip.key));
+    }
     for (const chip of chips) {
       const button = rail.createEl('button', { text: chip.text, cls: 'genealogy-generation-chip', attr: { type: 'button', 'aria-label': chip.label } });
       button.style.setProperty('--genealogy-chip', chip.color);
       button.toggleClass('is-active', highlighted.has(chip.key));
-      const dot = this.railToggle.createSpan({ cls: 'genealogy-rail-dot' });
-      dot.style.setProperty('--genealogy-chip', chip.color);
-      dot.toggleClass('is-active', highlighted.has(chip.key));
       // Generations count from «me»: the 0 button says so once you are chosen.
       if (chip.zero && this.nodeById.has(settings.selfPersonId)) button.createSpan({ cls: 'genealogy-me-badge', text: t().graph.me, attr: { 'aria-label': t().graph.rail.yours } });
       button.addEventListener('click', () => {
@@ -2263,7 +2285,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     if (list.dataset.graph === String(this.plugin.graphVersion)) return;
     list.empty();
     list.dataset.graph = String(this.plugin.graphVersion);
-    list.createDiv({ cls: 'genealogy-problems-title', text: t().graph.problemsTitle(issues.length) });
+    this.listTitle(list, t().graph.problemsTitle(issues.length), () => this.toggleProblems(false));
     const names = new Map(this.graph.people.map((person) => [person.id, person.name]));
     const bySource = new Map<string, Issue[]>();
     for (const issue of issues) bySource.set(issue.source, [...(bySource.get(issue.source) ?? []), issue]);
@@ -2278,6 +2300,29 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       openNote.addEventListener('click', () => void this.plugin.openNote(source));
       for (const issue of bySource.get(source)!) group.createDiv({ cls: 'genealogy-problems-issue', text: issueText(issue) });
     }
+  }
+
+  /** The title of the Проблемы or Уточнить list, with a cross that closes it. */
+  private listTitle(list: HTMLElement, text: string, close: () => void) {
+    const title = list.createDiv({ cls: 'genealogy-problems-title' });
+    title.createSpan({ text });
+    const cross = title.createDiv({ cls: 'clickable-icon genealogy-problems-close', attr: { 'aria-label': t().graph.closeList } });
+    setIcon(cross, 'x');
+    cross.addEventListener('click', close);
+  }
+
+  /**
+   * On a phone a tap on empty space first puts away whatever is open over the graph — the generations, the side
+   * panel, Проблемы, Уточнить — and does nothing else. True when something was closed.
+   */
+  private closeOverlays(): boolean {
+    if (!document.body.hasClass('is-phone')) return false;
+    let closed = false;
+    if (this.panel.hasClass('is-rail-open')) { this.showRail(false); closed = true; }
+    if (!this.controls.hasClass('is-close')) { this.setControlsOpen(false); closed = true; }
+    if (this.showProblems) { this.toggleProblems(false); closed = true; }
+    if (this.showClarify) { this.toggleClarify(false); closed = true; }
+    return closed;
   }
 
   private toggleClarify(show = !this.showClarify) {
@@ -2305,7 +2350,7 @@ class GenealogyGraphView extends ItemView implements HoverParent {
     if (list.dataset.graph === String(this.plugin.graphVersion)) return;
     list.empty();
     list.dataset.graph = String(this.plugin.graphVersion);
-    list.createDiv({ cls: 'genealogy-problems-title', text: t().graph.clarifyTitle(notes.size) });
+    this.listTitle(list, t().graph.clarifyTitle(notes.size), () => this.toggleClarify(false));
     const names = new Map(this.graph.people.map((person) => [person.id, person.name]));
     // The least filled cards first.
     const sources = [...notes.keys()].sort((a, b) => notes.get(b)!.length - notes.get(a)!.length || (names.get(a) ?? a).localeCompare(names.get(b) ?? b));
