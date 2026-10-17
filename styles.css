@@ -384,7 +384,7 @@
  * Phone controls in the style of the dock: frosted, 40 px, finger-sized. The generations are one pill of round buttons
  * that scrolls when there are many; the gear, ▶ and «wind» are separate round buttons; the focus is a segmented control.
  */
-.is-phone .genealogy-left:has(.genealogy-generation-rail:not(:empty)),
+.is-phone .genealogy-left.has-rail,
 .is-phone .genealogy-view button.genealogy-rail-toggle,
 .is-phone .genealogy-controls.is-close .graph-controls-button,
 .is-phone .genealogy-mode-bar,

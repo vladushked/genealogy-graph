@@ -7,7 +7,7 @@ test('old person default and removed mode settings are ignored', () => {
   assert.deepEqual(restoreSettings({ selfPath: 'legacy-person.md', mode: 'hourglass', showSpouses: false }), {
     language: 'ru', nameScheme: 'russian', fileNameTemplate: '{name} {born}-{died}', exportFonts: [],
     selfPersonId: '', hideDisconnected: false, depth: 0, rootsDepth: 0, templatesFolder: 'templates', cuts: [],
-    focus: 'generations', generationSize: 'older', highlightGenerations: [], highlightRelatives: [], freeLayout: true, filesFolder: '', cardsFolder: '', cardTemplate: '', renameCards: true, export: restoreExport(undefined), controls: { open: true, sections: ['filters'] },
+    focus: 'generations', generationSize: 'older', highlightGenerations: [], highlightRelatives: [], freeLayout: true, filesFolder: '', cardsFolder: '', cardsFolderMode: 'family', cardTemplate: '', renameCards: true, export: restoreExport(undefined), controls: { open: true, sections: ['filters'] },
   });
 });
 
@@ -17,7 +17,7 @@ test('explicitly chosen person and the other settings are restored; old generati
   }), {
     language: 'ru', nameScheme: 'russian', fileNameTemplate: '{name} {born}-{died}', exportFonts: [],
     selfPersonId: 'family/person.md', hideDisconnected: true, depth: -1, rootsDepth: 0, templatesFolder: 'Шаблоны', cuts: [{ edges: ['parent:a:b'], hide: ['a'], keep: ['b'] }],
-    focus: 'generations', generationSize: 'older', highlightGenerations: [], highlightRelatives: [], freeLayout: true, filesFolder: '', cardsFolder: '', cardTemplate: '', renameCards: true, export: restoreExport(undefined), controls: { open: true, sections: ['filters'] },
+    focus: 'generations', generationSize: 'older', highlightGenerations: [], highlightRelatives: [], freeLayout: true, filesFolder: '', cardsFolder: '', cardsFolderMode: 'family', cardTemplate: '', renameCards: true, export: restoreExport(undefined), controls: { open: true, sections: ['filters'] },
   });
 });
 

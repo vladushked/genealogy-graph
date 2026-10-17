@@ -2,7 +2,7 @@ import { valueText, type PersonFields } from '../schema';
 import { cardBase as sharedCardBase, DEFAULT_FILE_NAME, fileSafe, type Naming } from '../edit';
 import { dateYear } from '../dates';
 import { t } from '../i18n';
-import { familyName, personTitle, type NameScheme } from '../names';
+import { familyLine, familyName, personTitle, type LinePerson, type NameScheme } from '../names';
 
 export { familyName };
 import type { ImportedPerson, ImportedTree } from './types';
@@ -119,29 +119,15 @@ export function planImport(tree: ImportedTree, existing: ExistingCard[], options
   if (options.folderMode === 'single') {
     for (const person of tree.people) folderOf.set(person.key, root);
   } else {
-    // A person's line: women by birth surname, everyone else by surname; every surname has its own folder.
-    const line = (person: ImportedPerson) => {
-      const surname = person.sex === 'female' ? person.birthSurname ?? person.surname : person.surname ?? person.birthSurname;
-      return surname ? familyName(surname, naming.scheme) : null;
-    };
     const parentsOf = new Map<string, string[]>();
     for (const { child, parent } of tree.parents) parentsOf.set(child, [...(parentsOf.get(child) ?? []), parent]);
     const spousesOf = new Map<string, string[]>();
     for (const { a, b } of tree.spouses) { spousesOf.set(a, [...(spousesOf.get(a) ?? []), b]); spousesOf.set(b, [...(spousesOf.get(b) ?? []), a]); }
-    const resolveLine = (key: string, seen: Set<string>): string | null => {
-      if (seen.has(key)) return null;
-      seen.add(key);
-      const person = byKey.get(key)!;
-      const own = line(person);
-      if (own) return own;
-      // People without a surname join their father's line, then mother's, then husband's.
-      const parents = (parentsOf.get(key) ?? []).map((parent) => byKey.get(parent)!).filter(Boolean)
-        .sort((a, b) => (a.sex === 'male' ? 0 : 1) - (b.sex === 'male' ? 0 : 1));
-      for (const parent of parents) { const found = resolveLine(parent.key, seen); if (found) return found; }
-      for (const spouse of spousesOf.get(key) ?? []) { const found = resolveLine(spouse, seen); if (found) return found; }
-      return null;
+    const linePerson = (key: string): LinePerson<string> | undefined => {
+      const person = byKey.get(key);
+      return person && { sex: person.sex, surname: person.surname, birthSurname: person.birthSurname, parents: parentsOf.get(key) ?? [], spouses: spousesOf.get(key) ?? [] };
     };
-    for (const person of tree.people) folderOf.set(person.key, join(root, resolveLine(person.key, new Set()) ?? words.noSurname));
+    for (const person of tree.people) folderOf.set(person.key, join(root, familyLine(person.key, linePerson, naming.scheme) ?? words.noSurname));
   }
 
   // ── names: unique within the vault, so plain [[links]] resolve to exactly one card

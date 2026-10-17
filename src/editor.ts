@@ -468,7 +468,7 @@ export class PersonEditorView extends ItemView {
       if (mode.kind === 'create') {
         const created = { ...fields };
         for (const key of Object.keys(created) as FieldName[]) if (created[key] === '') delete created[key];
-        const file = await this.host.cards.create(created, this.relations, mode.near, mode.siblingOf);
+        const file = await this.host.cards.create(created, this.relations, mode.siblingOf);
         if (this.makeSelf) await this.host.setSelf(file.path);
         new Notice(t().editor.created(file.basename));
         this.mode = { kind: 'idle' };

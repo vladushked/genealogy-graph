@@ -4,6 +4,7 @@ import initSqlJs from 'sql.js';
 import { readAt5 } from '../../src/import/at5';
 import { ImportError, type ImportedPerson, type ImportedTree } from '../../src/import/types';
 import { completion, familyName, planImport, sourceRecord, type PlanOptions } from '../../src/import/plan';
+import { familyLine, type LinePerson } from '../../src/names';
 import { setLanguage } from '../../src/i18n';
 
 // Messages and labels below are the Russian ones.
@@ -131,6 +132,24 @@ test('new cards: names, family folders, links, photo, source record; namesakes g
   assert.deepEqual(plan.media, [{ key: 'm1', source: 'фото.jpg', target: 'files/фото.jpg' }]);
   assert.equal(familyName('Бельская', 'russian'), 'Бельские');
   assert.equal(familyName('Кравченко', 'russian'), 'Кравченко');
+});
+
+test('family line: women by birth surname, men by surname, no surname — father, mother, husband', () => {
+  const people: Record<string, LinePerson<string>> = {
+    father: { sex: 'male', surname: 'Озеров', parents: [], spouses: ['mother'] },
+    mother: { sex: 'female', surname: 'Озерова', birthSurname: 'Кравченко', parents: [], spouses: ['father'] },
+    son: { sex: 'male', parents: ['mother', 'father'], spouses: [] },
+    orphan: { sex: 'female', parents: ['mother'], spouses: [] },
+    wife: { sex: 'female', parents: [], spouses: ['father'] },
+    nobody: { sex: 'unknown', parents: ['ghost'], spouses: [] },
+  };
+  const line = (key: string) => familyLine(key, (person) => people[person], 'russian');
+  assert.equal(line('father'), 'Озеровы');
+  assert.equal(line('mother'), 'Кравченко');
+  assert.equal(line('son'), 'Озеровы', 'the father first, whatever the order');
+  assert.equal(line('orphan'), 'Кравченко');
+  assert.equal(line('wife'), 'Озеровы');
+  assert.equal(line('nobody'), null);
 });
 
 test('existing cards: matched by source record or by name + birth year, completed without overwriting', () => {

@@ -142,7 +142,7 @@ export default class GenealogyGraphPlugin extends Plugin {
   private refreshTimer: number | null = null;
   private saveTimer: number | null = null;
   private noteLeaf: WorkspaceLeaf | null = null;
-  cards = new Cards(this.app, () => ({ cardsFolder: this.settings.cardsFolder, template: this.settings.cardTemplate, naming: this.naming() }));
+  cards = new Cards(this.app, () => ({ cardsFolder: this.settings.cardsFolder, cardsFolderMode: this.settings.cardsFolderMode, template: this.settings.cardTemplate, naming: this.naming() }));
   /** «Уточнить»: what is still to be clarified about each person (see edit.clarifications). */
   clarifications = new Map<string, Clarification[]>();
   /** While a relationship field of the editor is armed, clicking a person on the graph adds them to it. */
@@ -2222,6 +2222,8 @@ class GenealogyGraphView extends ItemView implements HoverParent {
       : [...new Set(this.nodes.map((node) => node.generation).filter((value): value is number => value !== null && Number.isInteger(value)))].sort((a, b) => a - b)
         .map((generation) => ({ key: generation, text: generationLabel(generation), color: generationColor(generation, this.plugin.generationRange), zero: generation === 0, label: t().graph.rail.generation(generationLabel(generation)) }));
     this.railToggle.toggle(chips.length >= 2);
+    // The phone styles give the rail its frosted pill only when it has buttons (styles.css).
+    rail.parentElement?.toggleClass('has-rail', chips.length >= 2);
     if (chips.length < 2) { this.showRail(false); return; }
     const list = byRelatives ? settings.highlightRelatives : settings.highlightGenerations;
     const highlighted = new Set(list);
@@ -2620,6 +2622,13 @@ class GenealogySettingsTab extends PluginSettingTab {
         } },
       ] },
       { heading: words.newCards, rows: [
+        { name: words.cardsFolderMode, desc: words.cardsFolderModeDesc, control: (setting) => setting.addDropdown((dropdown) => {
+          for (const [value, label] of Object.entries(words.cardsFolderModes)) dropdown.addOption(value, label);
+          dropdown.setValue(settings.cardsFolderMode).onChange((value) => {
+            settings.cardsFolderMode = value === 'single' ? 'single' : 'family';
+            this.plugin.requestSave();
+          });
+        }) },
         { name: words.cardsFolder, desc: words.cardsFolderDesc, control: (setting) => setting
           .addText((text) => text.setPlaceholder(words.vaultRoot).setValue(settings.cardsFolder).onChange((value) => {
             settings.cardsFolder = normalizeFolder(value);

@@ -163,6 +163,30 @@ export function assumedParent(sibling: Relative, scheme: NameScheme, newParent: 
   };
 }
 
+/** What the family line of a person is worked out from. */
+export interface LinePerson<K> { sex: Sex; surname?: string; birthSurname?: string; scheme?: NameScheme | null; parents: K[]; spouses: K[] }
+
+/**
+ * A person's family folder: women by birth surname, everyone else by surname. People without a surname join their
+ * father's line, then mother's, then husband's. Null when no one up the line has a surname.
+ */
+export function familyLine<K>(start: K, person: (key: K) => LinePerson<K> | undefined, scheme: NameScheme): string | null {
+  const seen = new Set<K>();
+  const resolve = (key: K): string | null => {
+    if (seen.has(key)) return null;
+    seen.add(key);
+    const one = person(key);
+    if (!one) return null;
+    const surname = (one.sex === 'female' ? one.birthSurname || one.surname : one.surname || one.birthSurname)?.trim();
+    if (surname) return familyName(surname, one.scheme ?? scheme);
+    const parents = one.parents.map((parent) => ({ parent, sex: person(parent)?.sex })).sort((a, b) => (a.sex === 'male' ? 0 : 1) - (b.sex === 'male' ? 0 : 1));
+    for (const { parent } of parents) { const found = resolve(parent); if (found) return found; }
+    for (const spouse of one.spouses) { const found = resolve(spouse); if (found) return found; }
+    return null;
+  };
+  return resolve(start);
+}
+
 /** Folder name for a family of a surname: Озеров/Озерова → Озеровы in the Russian scheme; the first surname in the Spanish. */
 export function familyName(surname: string, scheme: NameScheme): string {
   const word = surname.trim();

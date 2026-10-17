@@ -26,7 +26,7 @@ Select a person: a **+** appears beside them with **Parent**, **Child**, **Spous
 - A new child gets both parents when the person has one spouse; a second parent becomes the first one's spouse.
 - A sibling of a person without parents gets a common parent created as a hypothesis (`identity: hypothesis`, with a question in `questions`).
 - **Relationship fields** (**Parents**, **Children**, **Spouses**): click the field, then click people on the graph — each one is added (`Esc` ends picking) — or type a name.
-- Relationships are written into both cards. A new card goes into the folder of the relative it was added to (otherwise **Folder for new cards**); **Card template** gives it a template's properties and text.
+- Relationships are written into both cards. A new card goes into its family folder, as an [import](import.md) puts it: women by birth surname, everyone else by surname, people without a surname with their father, mother or husband (**Where new cards go**: family folders or one folder; the folders are in **Folder for new cards**). **Card template** gives it a template's properties and text.
 - A selected person's card stays on the form for editing; with unsaved changes, selecting someone else does not replace it. The cross in its corner closes a new card or drops the changes.
 
 ### 3. Select people, open a profile
@@ -141,7 +141,7 @@ Under the gear while the panel is folded: **generation by generation** (the play
 - **Language**: as in Obsidian, English or Russian. Command names change after Obsidian restarts.
 - **Card for «Find me»**: your own card, generation 0.
 - **Name scheme**, **File name of new cards** with an example under it, **Rename by the template** (see [Names](#names)).
-- **Folder for new cards**, **Card template**.
+- **Where new cards go**, **Folder for new cards**, **Card template**.
 - **Files folder**: where imports copy photos and documents.
 - **Fonts for PDF**: TrueType fonts for scripts the bundled font lacks (see [export](export.md#fonts)).
 - **Templates folder**: notes there are not on the graph.

@@ -1,6 +1,7 @@
 import type { Cut } from './model';
 import { restoreExport, type ExportSettings } from './print';
 import { DEFAULT_FILE_NAME } from './edit';
+import type { CardsFolderMode } from './cards';
 import type { LanguageSetting } from './i18n';
 import { NAME_SCHEMES, type NameScheme } from './names';
 
@@ -37,8 +38,10 @@ export interface SettingsData {
   freeLayout: boolean;
   /** Vault folder for files brought in by imports; empty means Obsidian's attachment folder. */
   filesFolder: string;
-  /** Folder for people added in the graph who have no relative to sit next to; empty is the vault root. */
+  /** Folder of cards added in the graph: the root of the family folders, or the one folder; empty is the vault root. */
   cardsFolder: string;
+  /** Cards added in the graph go into family folders, as an import puts them, or all into cardsFolder. */
+  cardsFolderMode: CardsFolderMode;
   /** Note whose properties and text start every card added in the graph; empty starts from blank. */
   cardTemplate: string;
   /** Rename a card when its name or dates change, if its file name still follows the file name template. */
@@ -85,6 +88,7 @@ export function restoreSettings(value: unknown, obsidianLanguage = 'en'): Settin
     freeLayout: saved.freeLayout !== false,
     filesFolder: typeof saved.filesFolder === 'string' ? normalizeFolder(saved.filesFolder) : '',
     cardsFolder: typeof saved.cardsFolder === 'string' ? normalizeFolder(saved.cardsFolder) : '',
+    cardsFolderMode: oneOf(saved.cardsFolderMode, ['family', 'single'], 'family'),
     cardTemplate: typeof saved.cardTemplate === 'string' ? saved.cardTemplate.trim() : '',
     renameCards: saved.renameCards !== false,
     export: restoreExport(saved.export),

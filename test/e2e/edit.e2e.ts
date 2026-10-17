@@ -15,25 +15,25 @@ describe('[EDIT] building a family tree from an empty vault', () => {
     await expect(browser.$('.genealogy-editor-check input')).toBeSelected();
     await save();
     await waitPeople(1);
-    await waitFile('Озеров Денис Сергеевич 1990-?.md');
-    expect((await state()).settings.selfPersonId).toBe('Озеров Денис Сергеевич 1990-?.md');
-    expect(await frontmatter('Озеров Денис Сергеевич 1990-?.md')).toMatchObject({ type: 'person', name: 'Озеров Денис Сергеевич', sex: 'male', birth_date: '1990-03-14' });
+    await waitFile('Озеровы/Озеров Денис Сергеевич 1990-?.md');
+    expect((await state()).settings.selfPersonId).toBe('Озеровы/Озеров Денис Сергеевич 1990-?.md');
+    expect(await frontmatter('Озеровы/Озеров Денис Сергеевич 1990-?.md')).toMatchObject({ type: 'person', name: 'Озеров Денис Сергеевич', sex: 'male', birth_date: '1990-03-14' });
   });
 
   it('[EDIT-02] a child: the parent, surname and patronymic are filled in; the link is written into both cards', async () => {
-    await selectOnly('Озеров Денис Сергеевич 1990-?.md');
+    await selectOnly('Озеровы/Озеров Денис Сергеевич 1990-?.md');
     await addRelative('ребёнка');
     await fillForm({ Пол: 'male' });
     expect(await formValues()).toEqual(expect.arrayContaining(['Озеров', 'Денисович']));
     await fillForm({ Имя: 'Лев', 'Дата рождения': '2020' });
     await save();
     await waitPeople(2);
-    expect((await frontmatter('Озеров Денис Сергеевич 1990-?.md')).children).toEqual(['[[Озеров Лев Денисович 2020-?]]']);
-    expect((await frontmatter('Озеров Лев Денисович 2020-?.md')).parents).toEqual(['[[Озеров Денис Сергеевич 1990-?]]']);
+    expect((await frontmatter('Озеровы/Озеров Денис Сергеевич 1990-?.md')).children).toEqual(['[[Озеров Лев Денисович 2020-?]]']);
+    expect((await frontmatter('Озеровы/Озеров Лев Денисович 2020-?.md')).parents).toEqual(['[[Озеров Денис Сергеевич 1990-?]]']);
   });
 
   it('[EDIT-03] a parent: a father named after the patronymic of the child', async () => {
-    await selectOnly('Озеров Денис Сергеевич 1990-?.md');
+    await selectOnly('Озеровы/Озеров Денис Сергеевич 1990-?.md');
     await addRelative('родителя');
     expect(await formValues()).toEqual(expect.arrayContaining(['Озеров', 'Сергей']));
     await save();
@@ -42,12 +42,12 @@ describe('[EDIT] building a family tree from an empty vault', () => {
   });
 
   it('[EDIT-04] a new birth year renames the card by the template; Obsidian updates the links', async () => {
-    await selectOnly('Озеров Денис Сергеевич 1990-?.md');
+    await selectOnly('Озеровы/Озеров Денис Сергеевич 1990-?.md');
     await fillForm({ 'Дата рождения': '1991-03-14' });
     await save();
-    await waitFile('Озеров Денис Сергеевич 1991-?.md');
-    await browser.waitUntil(async () => JSON.stringify(await frontmatter('Озеров Лев Денисович 2020-?.md')).includes('1991'), { timeout: 10000 });
-    expect((await state()).settings.selfPersonId).toBe('Озеров Денис Сергеевич 1991-?.md');
+    await waitFile('Озеровы/Озеров Денис Сергеевич 1991-?.md');
+    await browser.waitUntil(async () => JSON.stringify(await frontmatter('Озеровы/Озеров Лев Денисович 2020-?.md')).includes('1991'), { timeout: 10000 });
+    expect((await state()).settings.selfPersonId).toBe('Озеровы/Озеров Денис Сергеевич 1991-?.md');
   });
 });
 

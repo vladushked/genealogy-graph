@@ -3,7 +3,7 @@ import { references } from './model';
 import { lifeStatusOf, readFields, readPerson, writeFields, type FieldName, type PersonFields, type Sex } from './schema';
 import { addLink, cardBase, NEW_PARENT, RELATION_FIELDS, removeLink, REVERSE, type Naming, type RelationField } from './edit';
 import { t } from './i18n';
-import { assumedParent, ownScheme, personTitle, schemeOf, type Relative } from './names';
+import { assumedParent, familyLine, ownScheme, personTitle, schemeOf, type LinePerson, type Relative } from './names';
 
 /**
  * Writes person cards for the editor: new cards with their relationships declared from both sides, edits of an
@@ -12,10 +12,13 @@ import { assumedParent, ownScheme, personTitle, schemeOf, type Relative } from '
  */
 
 export type Relations = Record<RelationField, string[]>;
+export type CardsFolderMode = 'family' | 'single';
 
 export interface CardsHost {
-  /** Folder for a card that has no relative to sit next to. */
+  /** Folder of new cards: the root of the family folders, or the one folder. */
   cardsFolder: string;
+  /** New cards go into family folders (as an import puts them) or all into the one folder. */
+  cardsFolderMode: CardsFolderMode;
   /** Path of a note whose properties and text start new cards; empty for none. */
   template: string;
   /** Name scheme and file name template of new cards. */
@@ -78,10 +81,10 @@ export class Cards {
   }
 
   /**
-   * Creates a card and declares each relationship in both cards. `near` is a relative whose folder the card joins.
+   * Creates a card and declares each relationship in both cards, in its family folder (see folderFor).
    * A NEW_PARENT among the parents first creates the common parent of the new person and `siblingOf`, as a hypothesis.
    */
-  async create(fields: PersonFields, relations: Relations, near: string | null, siblingOf: string | null): Promise<TFile> {
+  async create(fields: PersonFields, relations: Relations, siblingOf: string | null): Promise<TFile> {
     const parents = [...relations.parents];
     const index = parents.indexOf(NEW_PARENT);
     if (index >= 0) {
@@ -94,11 +97,11 @@ export class Cards {
         identity: 'hypothesis', name: assumed.name, ...(sibling.scheme ? { name_scheme: sibling.scheme } : {}),
         surname: assumed.surname || undefined, given_name: assumed.given_name || '?', sex: assumed.sex, life_status: 'unknown',
         questions: [t().cards.commonParent(sibling.name, personTitle({ ...fields, birth_surname: undefined }, scheme))],
-      }, { parents: [], children: [siblingOf], spouses: [] }, siblingOf, null);
+      }, { parents: [], children: [siblingOf], spouses: [] }, null);
       parents.splice(index, 1, parent.path);
     }
     const host = this.host();
-    const folder = near ? parentFolder(near) : host.cardsFolder;
+    const folder = this.folderFor(fields, { parents, children: relations.children, spouses: relations.spouses });
     const base = cardBase(fields, lifeStatusOf(fields), host.naming);
     let path = normalizePath(folder ? `${folder}/${base}.md` : `${base}.md`);
     for (let n = 2; this.app.vault.getAbstractFileByPath(path); n++) path = normalizePath(folder ? `${folder}/${base} (${n}).md` : `${base} (${n}).md`);
@@ -112,6 +115,28 @@ export class Cards {
     const file = await this.app.vault.create(path, `---\n${stringifyYaml(properties)}---\n${template.body}`);
     for (const field of RELATION_FIELDS) for (const target of all[field]) await this.point(target, REVERSE[field], file.path, true);
     return file;
+  }
+
+  /**
+   * Folder of a new card, as an import chooses it: women by birth surname, everyone else by surname, people without
+   * one by their father's, mother's or husband's; «Без фамилии» when no one has a surname.
+   */
+  private folderFor(fields: PersonFields, relations: Relations): string {
+    const host = this.host();
+    if (host.cardsFolderMode === 'single') return host.cardsFolder;
+    const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
+    const sex: Sex = fields.sex === 'male' || fields.sex === 'female' ? fields.sex : 'unknown';
+    const known = new Map<string, LinePerson<string> | undefined>();
+    const person = (key: string): LinePerson<string> | undefined => {
+      if (key === '') return { sex, surname: text(fields.surname), birthSurname: text(fields.birth_surname), scheme: ownScheme(fields.name_scheme), parents: relations.parents, spouses: relations.spouses };
+      if (!known.has(key)) {
+        const relative = this.relative(key);
+        known.set(key, relative ? { sex: relative.sex, surname: relative.surname, birthSurname: relative.birth_surname, scheme: relative.scheme, parents: relative.parents, spouses: relative.spouses } : undefined);
+      }
+      return known.get(key);
+    };
+    const line = familyLine('', person, host.naming.scheme) ?? t().plan.noSurname;
+    return host.cardsFolder ? `${host.cardsFolder}/${line}` : line;
   }
 
   /** Saves edited properties and relationships of a card; relatives added or removed are updated in their cards too. */
@@ -181,7 +206,6 @@ export class Cards {
 }
 
 const blankToNull = (value: unknown) => value === undefined || (typeof value === 'string' && !value.trim()) ? null : value;
-const parentFolder = (path: string) => path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
 
 async function ensureFolder(app: App, folder: string) {
   if (!folder) return;
